@@ -6,24 +6,37 @@
 <title>火柴大乱斗 · Stick Brawl</title>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
-  html,body{margin:0;padding:0;height:100%;background:#0a0c10;overflow:hidden;
-    font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;user-select:none}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;
+    font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;user-select:none;
+    background:radial-gradient(120% 130% at 50% 28%,#141b2b 0%,#07090d 72%)}
   #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-  canvas{background:#10141a;display:block;
-    width:min(100vw,calc(100vh*16/9));height:min(100vh,calc(100vw*9/16))}
+  canvas{background:#10141a;display:block;border-radius:8px;
+    width:min(100vw,calc(100vh*16/9));height:min(100vh,calc(100vw*9/16));
+    box-shadow:0 0 90px rgba(0,0,0,0.85),0 0 28px rgba(90,130,255,0.1),0 0 0 1px #2a3550}
   /* ---------- 菜单 ---------- */
   #menu{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
-    justify-content:center;gap:22px;color:#e8ecf2;z-index:10}
-  #menu h1{font-size:64px;margin:0;letter-spacing:14px;font-weight:900;
-    color:#fff;text-shadow:0 0 24px #ff5555aa,0 4px 0 #0008}
-  #menu h1 span{color:#ff5555}
+    justify-content:center;gap:22px;color:#e8ecf2;z-index:10;
+    background:radial-gradient(ellipse at center,rgba(8,11,18,0.55) 30%,rgba(8,11,18,0.82));
+    backdrop-filter:blur(3px)}
+  #menu h1{font-size:64px;margin:0;letter-spacing:14px;font-weight:900;font-style:italic;
+    transform:skewX(-4deg);
+    background:linear-gradient(180deg,#ffffff 18%,#ffd257 58%,#ff5555);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 22px #ff5555aa) drop-shadow(0 4px 0 rgba(0,0,0,0.55))}
+  #menu h1 span{-webkit-text-fill-color:transparent}
   #menu .sub{margin-top:-14px;color:#8a93a3;font-size:15px;letter-spacing:4px}
   .btns{display:flex;flex-direction:column;gap:12px;min-width:320px}
-  .btns button{font-size:20px;padding:13px 0;cursor:pointer;border-radius:10px;
-    border:1px solid #3a4656;background:#171d27;color:#e8ecf2;letter-spacing:6px;
-    transition:all .15s;font-family:inherit}
-  .btns button:hover{background:#232c3b;border-color:#ff5555;transform:translateY(-1px)}
+  .btns button{position:relative;font-size:20px;padding:14px 0 14px 18px;cursor:pointer;border-radius:8px;
+    border:1px solid #33405a;border-left:4px solid #ff5555;background:linear-gradient(180deg,#1b2432,#131a26);
+    color:#e8ecf2;letter-spacing:6px;transition:all .16s;font-family:inherit;overflow:hidden}
+  .btns button::after{content:"▸";position:absolute;right:12px;opacity:0;transition:all .16s;color:#ff8866}
+  .btns button:hover{background:linear-gradient(180deg,#26334a,#182236);border-color:#ff5555;
+    border-left-color:#ffd257;transform:translateX(6px);box-shadow:0 0 18px rgba(255,85,85,0.25)}
+  .btns button:hover::after{opacity:1;right:16px}
   .btns button:disabled{opacity:.35;cursor:not-allowed;transform:none}
+  .joinrow input{border-radius:8px}
+  .help{background:rgba(10,14,22,0.55);border:1px solid #26324a;border-radius:10px;padding:10px 18px}
+  #netinfo{background:rgba(10,14,22,0.55);padding:4px 16px;border-radius:99px}
   .joinrow{display:flex;gap:10px}
   .joinrow input{flex:1;font-size:22px;padding:10px 14px;text-align:center;letter-spacing:8px;
     border-radius:10px;border:1px solid #3a4656;background:#171d27;color:#fff;
@@ -36,6 +49,29 @@
   #netinfo.err{color:#ff7b6b}
   #codeDisplay{font-size:44px;letter-spacing:12px;color:#ffd257;font-weight:900;
     text-shadow:0 0 18px #ffd25766;display:none}
+  #movelist{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;
+    background:rgba(5,8,14,0.78);backdrop-filter:blur(6px)}
+  #movelist.open{display:flex}
+  .ml-card{width:min(860px,92vw);max-height:86vh;overflow:auto;border-radius:16px;padding:26px 34px;
+    background:linear-gradient(180deg,#141c2c,#0d1320);border:1px solid #2e3c58;
+    box-shadow:0 24px 80px rgba(0,0,0,0.7),0 0 40px rgba(80,120,255,0.08)}
+  .ml-card h2{margin:0 0 4px;font-size:34px;letter-spacing:10px;color:#fff;font-style:italic;
+    background:linear-gradient(180deg,#fff,#ffd257);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .ml-en{font-size:13px;letter-spacing:6px;color:#5a6a8a;-webkit-text-fill-color:#5a6a8a;margin-left:8px;font-style:normal}
+  .ml-cols{display:flex;gap:30px;margin-top:14px;flex-wrap:wrap}
+  .ml-col{flex:1;min-width:280px}
+  .ml-col h3{font-size:15px;color:#8fa3c8;letter-spacing:4px;margin:14px 0 8px;
+    border-bottom:1px solid #26324a;padding-bottom:5px}
+  .mv{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:6px;font-size:15px;color:#c8d2e2}
+  .mv:hover{background:rgba(255,213,87,0.06)}
+  .mv span{font-weight:700;color:#ffd257;letter-spacing:1px;font-size:14px}
+  .mv2{font-size:13px;color:#79839a;line-height:1.8;padding:4px 10px}
+  #ml-ok{margin-top:20px;width:100%;font-size:18px;padding:12px 0;cursor:pointer;border-radius:8px;
+    border:1px solid #6a5320;background:linear-gradient(180deg,#3a3020,#241d12);color:#ffd257;
+    letter-spacing:8px;font-family:inherit;transition:all .15s}
+  #ml-ok:hover{background:linear-gradient(180deg,#4a3c26,#2e2416);box-shadow:0 0 20px rgba(255,213,87,0.25)}
+  .btns button.ghost{border-left-color:#45c8ff;color:#9fc6e8}
+  .btns button.ghost:hover{border-color:#45c8ff;border-left-color:#8ae2ff;box-shadow:0 0 18px rgba(69,200,255,0.22)}
   #toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:50;
     background:#2a1520;color:#ffb3a7;border:1px solid #ff555566;padding:10px 22px;
     border-radius:10px;font-size:15px;display:none;letter-spacing:1px}
@@ -57,11 +93,50 @@
       <input id="code" maxlength="5" placeholder="房间码" autocomplete="off">
       <button id="b-join">加入房间</button>
     </div>
+    <button id="b-moves" class="ghost">招 式 表</button>
   </div>
+  <button id="ml-close" style="display:none">✕</button>
   <div class="help">
-    <b>玩家1</b>：A/D 移动 · W 跳 · S 格挡 · F 轻击 · G 重击 · H 必杀<br>
-    <b>玩家2</b>：←/→ 移动 · ↑ 跳 · ↓ 格挡 · J 轻击 · K 重击 · L 必杀<br>
-    打中对手和挨打都攒气，气满 100 放必杀 · 三局两胜 · Esc 返回菜单
+    <b>玩家1</b> WASD + J 轻拳 / K 轻腿 / U 重拳 / I 重腿 / L 闪避 ·
+    <b>玩家2</b> 方向键 + 小键盘 1·2·4·5 / 3 闪避<br>
+    详细出招与搓招教学点下方「招 式 表」
+  </div>
+</div>
+
+<div id="movelist">
+  <div class="ml-card">
+    <h2>招 式 表 <span class="ml-en">MOVE LIST</span></h2>
+    <div class="ml-cols">
+      <div class="ml-col">
+        <h3>基础</h3>
+        <div class="mv"><span>A / D</span>移动</div>
+        <div class="mv"><span>W</span>跳跃（顶点滞空）</div>
+        <div class="mv"><span>S 按住</span>蹲防（减伤 88%）</div>
+        <div class="mv"><span>L</span>闪避翻滚（无敌帧）</div>
+        <h3>普通攻击</h3>
+        <div class="mv"><span>J</span>轻拳 6</div>
+        <div class="mv"><span>K</span>轻腿 8</div>
+        <div class="mv"><span>U</span>重拳 14</div>
+        <div class="mv"><span>I</span>重腿 12（击飞）</div>
+        <div class="mv"><span>S+J / K</span>蹲轻拳 / 蹲轻腿</div>
+        <div class="mv"><span>S+U</span>蹲重拳·对空</div>
+        <div class="mv"><span>S+I</span>扫堂腿·击倒</div>
+      </div>
+      <div class="ml-col">
+        <h3>必杀技（搓招）</h3>
+        <div class="mv"><span>S · D · U</span>升龙拳 18 · 打飞 · 出手无敌（同发波滚法按U）</div>
+        <div class="mv"><span>S · D · J</span>气功波 12 · 可跳过</div>
+        <div class="mv"><span>S·D·S·D·J</span>超必杀·八稚女（气满 100）</div>
+        <div class="mv2">抓取按地五连 → 打飞 · 对方可跳跃躲避</div>
+        <h3>空中技</h3>
+        <div class="mv"><span>跳 + J / K</span>空轻拳 / 空轻腿</div>
+        <div class="mv"><span>跳 + U</span>空重拳·下劈</div>
+        <div class="mv"><span>跳 + I</span>飞踢 13（每跳限一次）</div>
+        <h3>系统</h3>
+        <div class="mv2">攻击中按键自动缓冲 · 命中后取消收招接下一招<br>落地当帧即可出招/二段跳 · Esc 菜单 · R 再来一局</div>
+      </div>
+    </div>
+    <button id="ml-ok">明 白 了</button>
   </div>
 </div>
 <div id="toast"></div>
@@ -73,8 +148,8 @@
    本地双人 / 单人AI / PeerJS P2P 联机（主机权威快照同步）
    ===================================================================== */
 
-const W = 1280, H = 720, GROUND = 616;
-const GRAV = 2300, WALK = 330, JUMPV = -830;
+const W = 1280, H = 720, GROUND = 616, MAXHP = 200;
+const GRAV = 2300, WALK = 330, JUMPV = -1010;
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 
@@ -84,6 +159,17 @@ const lerp  = (a, b, t) => a + (b - a) * t;
 const easeOut = x => 1 - (1 - x) * (1 - x);
 const easeIn  = x => x * x;
 const smoothstep = x => x * x * (3 - 2 * x);
+/* 两段骨骼 IK：给定髋部高度与脚的落点，反解膝/脚坐标（膝盖朝前弯）。腿加长：大腿46+小腿44 */
+function legIK(fx, fy, hy) {
+  const L1 = 46, L2 = 44, m = L1 + L2 - 1.2;
+  let dx = fx, dy = fy - hy, d = Math.hypot(dx, dy);
+  if (d > m) { dx *= m / d; dy *= m / d; d = m; }
+  const base = Math.atan2(dx, dy);
+  const a1 = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1));
+  const a2 = Math.acos(clamp((L2 * L2 + d * d - L1 * L1) / (2 * L2 * d), -1, 1));
+  const kx = Math.sin(base + a1) * L1, ky = hy + Math.cos(base + a1) * L1;
+  return [kx, ky, kx + Math.sin(base - a2) * L2, ky + Math.cos(base - a2) * L2];
+}
 const tri = (p, a, b) => p < a ? easeOut(p / a) : p < b ? 1 : easeIn(clamp((1 - p) / (1 - b), 0, 1));
 function genCode() {
   const cs = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
@@ -117,11 +203,24 @@ function noiseBurst(dur, vol, freq) {
   src.connect(f).connect(g).connect(ac.destination); src.start();
 }
 const sfx = {
-  hit(big) { noiseBurst(big ? 0.12 : 0.07, big ? 0.5 : 0.35, big ? 700 : 1000); beep('sine', big ? 150 : 180, 55, big ? 0.14 : 0.09, 0.3); },
-  block()  { beep('square', 720, 480, 0.05, 0.1); noiseBurst(0.03, 0.12, 2500); },
+  hit(big) {
+    const det = 0.9 + Math.random() * 0.25;                       // 随机音高避免重复感
+    noiseBurst(big ? 0.13 : 0.075, big ? 0.6 : 0.42, big ? 950 : 1500);
+    beep('sine', (big ? 140 : 200) * det, 42, big ? 0.19 : 0.1, big ? 0.42 : 0.3);
+    if (big) { beep('square', 85, 32, 0.2, 0.26); noiseBurst(0.2, 0.3, 500); }
+  },
+  swing(heavy) { noiseBurst(heavy ? 0.11 : 0.06, heavy ? 0.15 : 0.09, heavy ? 850 : 1700); },
+  block()  { beep('square', 720, 480, 0.05, 0.12); noiseBurst(0.03, 0.14, 2500); },
   special(){ beep('sawtooth', 160, 950, 0.3, 0.16); },
   ko()     { beep('sine', 320, 45, 0.6, 0.35); noiseBurst(0.25, 0.4, 420); },
+  dodge()  { noiseBurst(0.1, 0.16, 1400); },
+  land()   { noiseBurst(0.07, 0.18, 600); },
+  fb(big)  { beep('sawtooth', big ? 200 : 320, big ? 1200 : 850, big ? 0.4 : 0.22, big ? 0.2 : 0.14); noiseBurst(big ? 0.35 : 0.18, 0.2, 1900); },
+  slash()  { noiseBurst(0.09, 0.32, 2600); beep('square', 900, 200, 0.08, 0.13); },
+  grab()   { beep('sawtooth', 300, 80, 0.25, 0.2); noiseBurst(0.2, 0.25, 700); },
+  sweep()  { noiseBurst(0.16, 0.3, 500); },
   jump()   { beep('sine', 240, 400, 0.08, 0.06); },
+  max()    { beep('sine', 660, 660, 0.09, 0.14); setTimeout(() => beep('sine', 880, 880, 0.09, 0.14), 80); setTimeout(() => beep('sine', 1180, 1180, 0.16, 0.16), 160); },
   win()    { beep('sine', 440, 660, 0.12, 0.12); setTimeout(() => beep('sine', 550, 880, 0.2, 0.12), 120); },
   tick()   { beep('sine', 880, 880, 0.04, 0.05); }
 };
@@ -131,30 +230,50 @@ const keys = {};
 window.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   keys[k] = true;
+  keys[e.code.toLowerCase()] = true;   // 小键盘走 e.code，NumLock 开关都有效
   if (k.startsWith('arrow') || k === ' ') e.preventDefault();
   audio();
-  if (k === 'escape') toMenu();
+  if (k === 'escape') { if (mlEl.classList.contains('open')) { mlEl.classList.remove('open'); return; } toMenu(); }
   if (k === 'r' && match && match.phase === 'matchend') startMatch(lastMode);
 });
-window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; keys[e.code.toLowerCase()] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
-const P1MAP = { left:'a', right:'d', up:'w', down:'s', light:'f', heavy:'g', special:'h' };
-const P2MAP = { left:'arrowleft', right:'arrowright', up:'arrowup', down:'arrowdown', light:'j', heavy:'k', special:'l' };
+const P1MAP = { left:'a', right:'d', up:'w', down:'s', lp:'j', lk:'k', hp:'u', hk:'i', dg:'l', sp:'o' };
+const P2MAP = { left:'arrowleft', right:'arrowright', up:'arrowup', down:'arrowdown',
+                lp:'numpad1', lk:'numpad2', dg:'numpad3', hp:'numpad4', hk:'numpad5', sp:'numpad6' };
 function readKeys(m) {
   return { l:!!keys[m.left], r:!!keys[m.right], u:!!keys[m.up], d:!!keys[m.down],
-           lt:!!keys[m.light], hv:!!keys[m.heavy], sp:!!keys[m.special] };
+           lp:!!keys[m.lp], lk:!!keys[m.lk], hp:!!keys[m.hp], hk:!!keys[m.hk],
+           dg:!!keys[m.dg], sp:!!keys[m.sp] };
 }
-const ZERO_IN = { l:0, r:0, u:0, d:0, lt:0, hv:0, sp:0 };
+const ZERO_IN = { l:0, r:0, u:0, d:0, lp:0, lk:0, hp:0, hk:0, dg:0, sp:0 };
 
-/* ---------------- 招式表 ---------------- */
+/* ---------------- 招式表（拳皇WING式：站/蹲/空 三态拳脚 + 发波 + 超必杀） ---------------- */
 const ATK = {
-  light:   { dur:.30, a0:.10, a1:.18, range:100, dmg:6,  hitstun:.28, kb:150, mtr:9,  step:150 },
-  heavy:   { dur:.55, a0:.24, a1:.36, range:128, dmg:14, hitstun:.42, kb:470, mtr:16, step:100, launch:true,  big:true },
-  special: { dur:.72, a0:.18, a1:.46, range:155, dmg:24, hitstun:.55, kb:780, mtr:0,  step:0,   launch:true,  big:true, dash:780 }
+  // 站立
+  lp: { dur:.28, a0:.09, a1:.16, range:95,  dmg:6,  hitstun:.26, kb:140, mtr:8,  step:140 },
+  lk: { dur:.34, a0:.12, a1:.20, range:118, dmg:8,  hitstun:.30, kb:180, mtr:9,  step:80  },
+  hp: { dur:.55, a0:.24, a1:.36, range:124, dmg:14, hitstun:.42, kb:470, mtr:16, step:100, big:true },
+  hk: { dur:.60, a0:.26, a1:.40, range:148, dmg:12, hitstun:.45, kb:380, mtr:14, step:60,  launch:true, big:true },
+  // 下蹲（蹲着不动=下段防御）
+  clp: { dur:.26, a0:.08, a1:.15, range:85,  dmg:5,  hitstun:.24, kb:120, mtr:7,  step:80 },
+  clk: { dur:.30, a0:.10, a1:.18, range:112, dmg:6,  hitstun:.26, kb:150, mtr:8,  step:40 },
+  chp: { dur:.50, a0:.20, a1:.32, range:95,  dmg:13, hitstun:.45, kb:260, mtr:14, launch:true },          // 上勾拳 对空
+  chk: { dur:.55, a0:.22, a1:.38, range:134, dmg:10, hitstun:.50, kb:300, mtr:12, step:60, knockdown:true }, // 扫堂腿 倒地
+  // 空中
+  alp: { dur:.30, a0:.06, a1:.20, range:112, dmg:6,  hitstun:.30, kb:160, mtr:8 },
+  alk: { dur:.34, a0:.08, a1:.22, range:128, dmg:7,  hitstun:.32, kb:180, mtr:8 },
+  ahp: { dur:.42, a0:.12, a1:.28, range:122, dmg:12, hitstun:.40, kb:320, mtr:10, big:true },
+  ahk: { dur:.45, a0:.14, a1:.30, range:152, dmg:13, hitstun:.45, kb:380, mtr:10, big:true, knockdown:true },
+  // 升龙拳：前+重拳改为 →↓↘+拳 搓招；打飞强化
+  dp:  { dur:.62, a0:.04, a1:.26, range:132, dmg:18, hitstun:.60, kb:520, mtr:12, big:true, launch:true, self:true, dp:true },
+  // 发波（a0 时刻出弹）/ 超必杀大波
+  fb:  { dur:.42, a0:1, a1:0, range:0, dmg:0,  hitstun:0,  kb:0,   mtr:0 },
+  ult: { dur:2.2, a0:1, a1:0, range:0, dmg:0,  hitstun:0,  kb:0,   mtr:0 }
 };
 
 /* ---------------- 特效容器 ---------------- */
-let particles = [], shake = 0, freezeT = 0, slowMo = 0, flashA = 0;
+let particles = [], sparks = [], slashMarks = [], shake = 0, freezeT = 0, slowMo = 0, flashA = 0, zoomT = 0;
 function burst(x, y, n, col, spd, sz) {
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, v = (0.3 + Math.random() * 0.7) * spd;
@@ -162,40 +281,201 @@ function burst(x, y, n, col, spd, sz) {
       life:0, max:.3+Math.random()*.35, col, sz:sz*(0.5+Math.random()) });
   }
 }
+/* 紫炎：上升拖尾火苗（八稚女/升龙特效） */
+function flame(x, y, n, col) {
+  for (let i = 0; i < n; i++) {
+    particles.push({ x: x + (Math.random() - 0.5) * 30, y: y + (Math.random() - 0.5) * 40,
+      vx: (Math.random() - 0.5) * 60, vy: -60 - Math.random() * 80,
+      life: 0, max: 0.3 + Math.random() * 0.25, col, sz: 3 + Math.random() * 3, flame: true });
+  }
+}
 
 /* ---------------- 火柴人 ---------------- */
 class Fighter {
   constructor(x, facing, color, name) {
     this.x = x; this.y = GROUND; this.vx = 0; this.vy = 0;
-    this.facing = facing; this.hp = 100; this.hpShown = 100; this.meter = 0;
+    this.facing = facing; this.hp = MAXHP; this.hpShown = MAXHP; this.meter = 0;
     this.state = 'idle'; this.st = 0; this.hitT = 0; this.atk = null;
     this.hasHit = false; this.airAtk = false; this.wins = 0;
     this.color = color; this.name = name; this.prevIn = ZERO_IN;
-    this.trail = []; this.blockFlash = 0; this.ev = [];
+    this.trail = []; this.blockFlash = 0; this.ev = []; this.dodgeCd = 0; this.fbCd = 0;
+    this.comboHits = 0; this.comboTimer = 0; this.hitFlash = 0; this.dodgeGrace = 0;
+    this.age = 0; this.dirHist = []; this.dirHeld = {}; this.heldSince = {}; this.lastRelease = {};
+    this.qcfTimes = []; this._qcfLatch = false; this.turnT = 0; this._oldFacing = facing; this.kbV = 0;
   }
   get grounded() { return this.y >= GROUND - 0.5; }
   resetRound(x, facing) {
     this.x = x; this.y = GROUND; this.vx = 0; this.vy = 0; this.facing = facing;
-    this.hp = 100; this.hpShown = 100; this.state = 'idle'; this.st = 0;
-    this.hitT = 0; this.atk = null; this.trail = []; this._pose = null;
+    this.hp = MAXHP; this.hpShown = MAXHP; this.state = 'idle'; this.st = 0;
+    this.hitT = 0; this.atk = null; this.trail = []; this._pose = null; this.dodgeCd = 0; this.fbCd = 0; this._maxReady = false; this.hitFlash = 0;
+    this.comboHits = 0; this.comboTimer = 0;
   }
   pressed(inp, k) { return inp[k] && !this.prevIn[k]; }
+  /* ---- 搓招判定（朝向相对，键盘宽松版） ---- */
+  // ↓↘→：↓ 段结束后 → 段开始，窗口 0.45s
+  qcfOk() {
+    const dStart = this.heldSince[1] || -9, dEnd = this.dirHeld[1] ? this.age : (this.lastRelease[1] || -9);
+    const fStart = this.heldSince[2] || -9;
+    return dEnd >= this.age - 0.45 && fStart > dStart && fStart <= dEnd + 0.03;
+  }
+  // 升龙 = ↓↘→+W（与发波同款滚法，按 W 收尾）：↓ 段结束后 → 接上，0.45s 窗口
+  dpOk() {
+    const dStart = this.heldSince[1] || -9;
+    const dEnd = this.dirHeld[1] ? this.age : (this.lastRelease[1] || -9);
+    const fStart = this.heldSince[2] || -9;
+    return dEnd >= this.age - 0.45 && fStart > dStart && fStart <= dEnd + 0.05 && fStart > this.age - 0.5;
+  }
+  // ↓↘→↓↘→：0.55s 内两次完整 236
+  ultOk() {
+    return this.qcfTimes.length >= 2 && this.qcfTimes[this.qcfTimes.length - 1] - this.qcfTimes[0] < 0.55;
+  }
+  checkQcf() {
+    if (this.qcfOk() && !this._qcfLatch) { this.qcfTimes.push(this.age); this._qcfLatch = true; }
+    if (!this.qcfOk()) this._qcfLatch = false;
+    this.qcfTimes = this.qcfTimes.filter(t => this.age - t < 0.6);
+  }
+  // AI 专用：伪造一段方向历史（AI 不需要真的搓）
+  fakeMotion(name) {
+    const a = this.age;
+    if (name === 'fb') {
+      this.heldSince[1] = a - 0.12; this.lastRelease[1] = a - 0.02; this.dirHeld[1] = false;
+      this.heldSince[2] = a - 0.01; this.dirHeld[2] = true;
+    } else if (name === 'dp') {
+      this.heldSince[1] = a - 0.15; this.lastRelease[1] = a - 0.05; this.dirHeld[1] = false;
+      this.heldSince[2] = a - 0.03; this.dirHeld[2] = true;
+    } else if (name === 'ult') {
+      this.qcfTimes = [a - 0.34, a - 0.02];
+      this.heldSince[1] = a - 0.1; this.lastRelease[1] = a - 0.02; this.dirHeld[1] = false;
+      this.heldSince[2] = a - 0.01; this.dirHeld[2] = true;
+    }
+  }
   startAtk(name) {
     const d = ATK[name];
     this.state = name; this.st = 0; this.atk = d; this.hasHit = false;
     this.meter = clamp(this.meter + d.mtr * 0.35, 0, 100);
     if (d.step) this.vx = this.facing * d.step;
-    if (name === 'special') { sfx.special(); flashA = 0.35; this.ev.push({ t:'sp' }); }
+    if (d.self) {                                             // 升龙起跳：地爆冲击
+      this.vy = -920; this.vx = this.facing * 250;
+      sparks.push({ x: this.x, y: this.y - 6, t: 0, max: 0.3, big: true });
+      burst(this.x, GROUND, 14, '#8a93a3', 260, 4);
+      flame(this.x, this.y - 40, 10, '#ffd257');
+      slashMarks.push({ x: this.x + this.facing * 30, y: this.y - 60, a: this.facing > 0 ? -0.9 : Math.PI + 0.9, t: 0, max: 0.32, big: true, col: '#ffd257' });
+      flashA = Math.max(flashA, 0.3); shake = Math.max(shake, 13);
+    }
+    if (d.range > 0) sfx.swing(!!d.big);
+  }
+  // 统一出招入口：tap 为本帧按下的键集合；搓招优先于普通拳脚
+  tryAction(tap, inp) {
+    const air = !this.grounded;
+    const crouch = this.grounded && inp.d;
+    const punch = tap.hp ? 'hp' : (tap.lp ? 'lp' : null);
+    if (punch && !air) {
+      if (this.ultOk()) {
+        if (this.meter >= 100) {
+          this.meter = 0; this._maxReady = false; this.startAtk('ult');
+          freezeT = Math.max(freezeT, 0.45);        // 超必杀发动定格：全场静止，给对手反应窗口
+          flashA = Math.max(flashA, 0.35);
+          return true;
+        }
+        toast('气槽不足 100，无法发动超必杀');
+      }
+      if (tap.hp && this.dpOk()) { this.startAtk('dp'); return true; }                                // ↓↘→+重拳U=升龙（优先）
+      if (tap.lp && this.qcfOk() && this.fbCd <= 0) { this.startAtk('fb'); return true; }              // ↓↘→+轻拳J=发波
+    }
+    if (tap.dg) {
+      if (this.dodgeCd <= 0) { this.startDodge(inp); return true; }
+      return false;
+    }
+    if (punch) {
+      if (air && this.airAtk) return false;
+      if (air) this.airAtk = true;
+      this.startAtk(air ? (punch === 'hp' ? 'ahp' : 'alp')
+                       : crouch ? (punch === 'hp' ? 'chp' : 'clp') : punch);
+      return true;
+    }
+    if (tap.hk) {
+      if (air && this.airAtk) return false;              // 每跳只能一击
+      if (air) this.airAtk = true;
+      this.startAtk(air ? 'ahk' : crouch ? 'chk' : 'hk'); return true;
+    }
+    if (tap.lk) {
+      if (air && this.airAtk) return false;
+      if (air) this.airAtk = true;
+      this.startAtk(air ? 'alk' : crouch ? 'clk' : 'lk'); return true;
+    }
+    return false;
   }
   update(dt, opp, inp) {
     this._pdt = dt;
     this.st += dt;
+    this.age += dt;
+    this.turnT = Math.max(0, this.turnT - dt);
+    this.dodgeCd = Math.max(0, this.dodgeCd - dt);
+    this.fbCd = Math.max(0, this.fbCd - dt);
+    this.comboTimer = Math.max(0, this.comboTimer - dt);
+    if (this.comboTimer === 0) this.comboHits = 0;   // 连段窗口 0.6s 后才重置，防间隙重计
+    this.hitFlash = Math.max(0, (this.hitFlash || 0) - dt * 7);
+    this.dodgeGrace = Math.max(0, (this.dodgeGrace || 0) - dt);
+    this.lastInp = inp;
+    // 方向输入历史（搓招判定用，朝向相对：2=前 1=下 4=后）
+    const fw = (inp.r && this.facing === 1) || (inp.l && this.facing === -1);
+    const bk = (inp.l && this.facing === 1) || (inp.r && this.facing === -1);
+    const dm = (inp.d ? 1 : 0) | (fw ? 2 : 0) | (bk ? 4 : 0);
+    for (const bit of [1, 2, 4]) {
+      const now = !!(dm & bit), was = !!this.dirHeld[bit];
+      if (now && !was) this.heldSince[bit] = this.age;
+      if (!now && was) this.lastRelease[bit] = this.age;
+      this.dirHeld[bit] = now;
+    }
+    if (!this.dirHist.length || this.dirHist[this.dirHist.length - 1].d !== dm) {
+      this.dirHist.push({ t: this.age, d: dm });
+      if (this.dirHist.length > 26) this.dirHist.shift();
+    }
+    this.dirNow = dm;
+    this.checkQcf();
+    const tap = {};
+    for (const k of ['u', 'd', 'l', 'r', 'dg', 'hp', 'hk', 'lp', 'lk']) tap[k] = this.pressed(inp, k);
     this.blockFlash = Math.max(0, this.blockFlash - dt * 4);
     this.hpShown += (this.hp - this.hpShown) * Math.min(1, dt * 5);
 
     if (this.state === 'ko' || this.state === 'win') {
       if (this.state === 'ko' && this.grounded) this.vx *= Math.pow(0.001, dt);
       this.physics(dt); return;
+    }
+
+    // 被超必杀抓取：完全被对方控制（位置由抓取者设置）
+    if (this.state === 'grabbed') { this.prevIn = inp; return; }
+
+    // 击倒：倒地无敌（带闪烁），躺 0.95s 后起身
+    if (this.state === 'down') {
+      if (this.grounded) this.vx *= Math.pow(0.01, dt);
+      if (this.st > 1.35) { this.state = 'idle'; this.st = 0; }
+      this.physics(dt); this.prevIn = inp; return;
+    }
+
+    // 落地缓冲：从空中落地压低重心卸力
+    if (this.grounded && this.state === 'jump' && this.vy >= 0) {
+      this.state = 'land'; this.st = 0; this.airAtk = false; sfx.land();
+      burst(this.x, GROUND, 7, '#5a6478', 130, 3);
+    }
+    if (this.state === 'land') {
+      this.vx *= Math.pow(0.01, dt);
+      // 落地取消：缓冲中的招/新按键立即接（KOF 落地帧即可出招）
+      if (tap.u) { this.state = 'prejump'; this.st = 0; this.physics(dt); this.prevIn = inp; return; }
+      if (this.tryAction(tap, inp)) { this.physics(dt); this.prevIn = inp; return; }
+      if (this.st >= 0.13) { this.state = inp.d ? 'crouch' : 'idle'; this.st = 0; }
+      this.physics(dt); this.prevIn = inp; return;
+    }
+
+    // 起跳预备：压低重心蓄力，随后蹬地（按住方向则保持走速，跳入才有冲击力）
+    if (this.state === 'prejump') {
+      const dir = (inp.r ? 1 : 0) - (inp.l ? 1 : 0);
+      const back = dir !== 0 && dir !== this.facing;
+      this.vx = dir * WALK * (back ? 0.8 : 1);
+      if (this.st >= 0.09) {
+        this.vy = JUMPV; this.state = 'jump'; this.st = 0; this.airAtk = false; sfx.jump();
+      }
+      this.physics(dt); this.prevIn = inp; return;
     }
 
     if (this.state === 'hitstun') {
@@ -208,84 +488,316 @@ class Fighter {
     // 攻击状态推进
     if (this.atk) {
       const d = this.atk;
-      if (this.state === 'special' && this.st < 0.2) this.vx = this.facing * d.dash;
-      else this.vx *= Math.pow(this.grounded ? 0.001 : 0.5, dt);
-      if (this.st >= d.a0 && this.st <= d.a1 && !this.hasHit) this.tryHit(opp, d);
-      if (this.st >= d.dur) { this.atk = null; this.state = this.grounded ? 'idle' : 'jump'; this.st = 0; }
+      this.vx *= Math.pow(this.grounded ? 0.001 : 0.5, dt);
+      // 连招缓冲：攻击中按的招先缓存；命中后可随时取消收招接招，未命中则收招末尾接
+      // 大招（ult）期间禁止缓冲/取消——抓取序列不可被打断，否则对方会中途掉落
+      if (this.state !== 'ult') for (const k of ['dg', 'hp', 'hk', 'lp', 'lk']) if (tap[k]) this.buf = k;
+      if (this.buf && this.state !== 'ult' && this.st > Math.max(d.a1, 0.1) && (this.hasHit || this.st > d.dur - 0.08)) {
+        const k = this.buf; this.buf = null;
+        if (this.tryAction({ [k]: true }, inp)) { this.physics(dt); this.prevIn = inp; return; }
+      }
+      // 气功波：推进到出手时刻发射一次
+      if (!this.hasHit && this.state === 'fb' && this.st >= 0.15) {
+        this.hasHit = true;
+        this.fbCd = 1.5;
+        match.projectiles.push(new Projectile(this.x + this.facing * 52, this.y - 76, this.facing * 650, this, false));
+        sfx.fb(false);
+        flashA = Math.max(flashA, 0.32);                                    // 出手白闪
+        sparks.push({ x: this.x + this.facing * 52, y: this.y - 76, t: 0, max: 0.3, big: true });
+        sparks.push({ x: this.x + this.facing * 52, y: this.y - 76, t: -0.06, max: 0.3, big: true }); // 双冲击环
+        flame(this.x + this.facing * 50, this.y - 76, 8, this.color);
+        this.ev.push({ t:'fb', b: 0 });
+      }
+      // 超必杀「八稚女」：前摇蓄力 → 冲刺抓取 → 举起 → 摔平 → 按地连打 → 打飞
+      if (this.state === 'ult' && !this.hasHit) {
+        if (this.st < 0.22) {                                   // 前摇蓄力：紫焰聚气，给对手反应时间
+          this.vx = 0;
+          if (Math.random() < 0.9) flame(this.x + (Math.random() - 0.5) * 44, this.y - 60 - Math.random() * 60, 2, '#b26bff');
+        } else if (this.st < 0.5) {                             // 冲刺段
+          this.vx = this.facing * 950;
+          if (Math.random() < 0.85) flame(this.x, this.y - 95, 2, '#b26bff');
+        if (Math.random() < 0.7) particles.push({ x: this.x - this.facing * 40, y: this.y - 40 - Math.random() * 120,
+          vx: -this.facing * 900, vy: 0, life: 0, max: 0.12, col: '#ffffff', sz: 3, line: true });
+          const o = opp;
+          if (o.y > GROUND - 90 && o.state !== 'down' && o.state !== 'ko' && o.state !== 'grabbed' && Math.abs(o.x - this.x) < 120) {
+            this.hasHit = true; this.grabN = 0; this.grabT = this.st;
+            o.state = 'grabbed'; o.st = 0; o.atk = null; o._slammed = false; o._lifted = true;
+            o.vx = 0; o.vy = 0; o.kbV = 0; o.hitT = 0;
+            sfx.grab(); flashA = Math.max(flashA, 0.45);
+            burst(o.x, o.y - 100, 18, '#b26bff', 380, 4);
+            shake = Math.max(shake, 10);
+            this.ev.push({ t:'grab' });
+          }
+        } else if (this.st < 0.6) {                             // 冲过头 0.1s 内仍可抓（跳跃可躲）
+          this.vx = 0;
+          const o = opp;
+          if (o.y > GROUND - 90 && o.state !== 'down' && o.state !== 'ko' && o.state !== 'grabbed' && Math.abs(o.x - this.x) < 120) {
+            this.hasHit = true; this.grabN = 0; this.grabT = this.st;
+            o.state = 'grabbed'; o.st = 0; o.atk = null; o._slammed = false; o._lifted = true;
+            o.vx = 0; o.vy = 0; o.kbV = 0; o.hitT = 0;
+            sfx.grab(); flashA = Math.max(flashA, 0.45);
+            burst(o.x, o.y - 100, 18, '#b26bff', 380, 4);
+            shake = Math.max(shake, 10);
+            this.ev.push({ t:'grab' });
+          }
+        } else {                                                // 空招：大破绽
+          this.atk = null; this.state = 'idle'; this.st = 0;
+        }
+      } else if (this.state === 'ult' && this.hasHit) {         // 抓取成功：举起 → 摔平 → 按地连打 → 打飞
+        this.vx = 0;
+        const o = opp, gt = this.st - this.grabT;
+        // 击杀后不中断：尸体继续被按着打，最后一击打飞，全程放完
+        if (gt < 0.2) {                                         // 举起：掐住提离地面
+          o.x = clamp(this.x + this.facing * 40, 60, W - 60);
+          o.y = GROUND - 55; o.vx = 0; o.vy = 0; o.kbV = 0; o._lifted = true;
+          if (Math.random() < 0.6) flame(o.x, o.y - 60, 2, '#b26bff');
+        } else {
+          if (!o._slammed) {                                    // 摔平：重重砸在地上
+            o._lifted = false; o._slammed = true; o.st = 0;
+            o.y = GROUND; o.hp -= 8;
+            burst(o.x, GROUND, 16, '#b26bff', 320, 4);
+            burst(o.x, GROUND - 40, 10, '#ffffff', 260, 3);
+            flame(o.x, GROUND - 30, 10, '#b26bff');
+            sfx.hit(true); sfx.sweep();
+            shake = Math.max(shake, 16); flashA = Math.max(flashA, 0.35);
+            sparks.push({ x: o.x, y: GROUND - 10, t: 0, max: 0.25, big: true });
+            this.ev.push({ t:'hit', x:o.x, y:GROUND - 10, b:1 });
+          }
+          o.x = clamp(this.x + this.facing * 55, 60, W - 60);
+          o.y = GROUND; o.vx = 0; o.vy = 0; o.kbV = 0;
+          if (gt >= 0.42 + this.grabN * 0.18 && this.grabN < 5) {   // 按着打：地面五连抓
+            this.grabN++;
+            o.hp -= 8;
+            o.meter = clamp(o.meter + 3, 0, 100);
+            o.blockFlash = 1; o.st = 0;
+            sparks.push({ x: o.x, y: GROUND - 24, t: 0, max: 0.16, big: false });
+            slashMarks.push({ x: o.x, y: GROUND - 30, a: (this.grabN % 2 ? 1 : -1) * 1.1, t: 0, max: 0.22, big: false, col: '#b26bff' });
+            flame(o.x, GROUND - 30, 8, '#b26bff');
+            sfx.slash(); shake = Math.max(shake, 8);
+            flashA = Math.max(flashA, 0.15);
+            this.ev.push({ t:'hit', x:o.x, y:GROUND - 26, b:0 });
+          }
+          if (gt >= 1.5) {                                      // 最终一击打飞
+            o.state = 'hitstun'; o.st = 0; o.hitT = 0.5;
+            o.hp -= 16;
+            o._slammed = false; o._lifted = false;
+            o.vy = -650; o.vx = 0; o.kbV = this.facing * 560; o.y -= 4;
+            sparks.push({ x: o.x, y: GROUND - 40, t: 0, max: 0.3, big: true });
+            slashMarks.push({ x: o.x, y: GROUND - 40, a: 0.4, t: 0, max: 0.34, big: true, col: '#b26bff' });
+            flame(o.x, GROUND - 60, 22, '#b26bff');
+            burst(o.x, GROUND - 30, 30, '#b26bff', 520, 4);
+            flashA = 0.7; slowMo = 0.9; shake = 28;
+            sfx.hit(true);
+            this.ev.push({ t:'hit', x:o.x, y:GROUND - 30, b:1 });
+            this.state = (o.state === 'ko' || o.hp <= 0) ? 'win' : 'hitstun';         // 击杀→胜利姿势；否则后摇
+            this.hitT = 0.25; this.atk = null; this.st = 0;
+            this.physics(dt); this.prevIn = inp; return;
+          }
+        }
+      } else if (this.state === 'ult' && this.st > 0.7) {       // 空招：破绽
+        this.atk = null; this.state = 'idle'; this.st = 0;
+      }
+      // 升龙上升段：螺旋金炎盘旋 + 速度线
+      if (this.state === 'dp' && this.st < 0.4) {
+        for (let i = 0; i < 3; i++) {
+          const ph = this.st * 30 + i * 2.1;
+          particles.push({ x: this.x + Math.cos(ph) * 22, y: this.y - 30 - ((this.st * 340 + i * 36) % 200),
+            vx: -Math.sin(ph) * 60, vy: -170, life: 0, max: 0.3, col: i === 1 ? '#fff3b0' : '#ffd257', sz: 4, flame: true });
+        }
+        if (Math.random() < 0.9) flame(this.x, this.y - 110, 2, '#ffd257');
+        if (Math.random() < 0.8) particles.push({ x: this.x - this.facing * 30, y: this.y - 50 - Math.random() * 110,
+          vx: -this.facing * 880, vy: 0, life: 0, max: 0.1, col: '#ffd257', sz: 4, line: true });
+      }
+      if (this.st >= d.a0 && this.st <= d.a1 && !this.hasHit && d.range > 0) this.tryHit(opp, d);
+      if (this.st >= d.dur) {
+        if (this.buf) {
+          const k = this.buf; this.buf = null;
+          if (this.tryAction({ [k]: true }, inp)) { this.physics(dt); this.prevIn = inp; return; }
+        }
+        this.atk = null;
+        this.state = this.grounded ? (inp.d ? 'crouch' : 'idle') : 'jump';
+        if (this.grounded) this.airAtk = false;          // 落地重新武装空中招
+        this.st = 0;
+      }
       this.physics(dt); this.prevIn = inp; return;
     }
 
-    // 格挡
+    // 闪避翻滚：三段滚动 + 速度平滑衰减 + 滚完可缓冲接招
+    if (this.state === 'dodge') {
+      const p = clamp(this.st / 0.55, 0, 1);
+      this.vx = this.dodgeVX * (1 - 0.7 * easeOut(p));
+      if (p < 0.72 && Math.random() < 0.55) burst(this.x, GROUND, 1, '#5a6478', 90, 2.5);
+      for (const k of ['dg', 'hp', 'hk', 'lp', 'lk', 'sp']) if (tap[k]) this.buf = k;
+      if (this.st >= 0.55) {
+        this.dodgeGrace = 0.2;                      // 起身保护帧：完全站起来前仍无敌
+        this.state = inp.d ? 'crouch' : 'idle'; this.st = 0;
+        if (this.buf) {
+          const k = this.buf; this.buf = null;
+          if (this.tryAction({ [k]: true }, inp)) { this.physics(dt); this.prevIn = inp; return; }
+        }
+      }
+      this.physics(dt); this.prevIn = inp; return;
+    }
+
+    // 下蹲（蹲着不动=下段防御；蹲中也随对手转向）
     if (inp.d && this.grounded) {
-      if (this.state !== 'block') { this.state = 'block'; this.st = 0; }
-      this.vx = 0; this.physics(dt); this.prevIn = inp; return;
-    } else if (this.state === 'block') { this.state = 'idle'; this.st = 0; }
+      if (this.state !== 'crouch') { this.state = 'crouch'; this.st = 0; }
+      this.vx = 0;
+      if (opp && Math.abs(opp.x - this.x) > 12) {
+        const nf2 = opp.x >= this.x ? 1 : -1;
+        if (nf2 !== this.facing) { this._oldFacing = this.facing; this.facing = nf2; this.turnT = 0.15; }
+      }
+      this.tryAction(tap, inp);
+      this.physics(dt); this.prevIn = inp; return;
+    }
+    if (this.state === 'crouch') { this.state = 'idle'; this.st = 0; }
 
     // 自由控制
     if (this.grounded) {
-      if (this.pressed(inp, 'u')) { this.vy = JUMPV; this.state = 'jump'; this.st = 0; this.airAtk = false; sfx.jump(); }
-      if (this.pressed(inp, 'sp') && this.meter >= 100) { this.meter = 0; this.startAtk('special'); }
-      else if (this.pressed(inp, 'hv')) this.startAtk('heavy');
-      else if (this.pressed(inp, 'lt')) this.startAtk('light');
-      else {
+      if (tap.u) { this.state = 'prejump'; this.st = 0; }    // W 纯跳跃（升龙改 U 联动）
+      else if (!this.tryAction(tap, inp)) {
         const dir = (inp.r ? 1 : 0) - (inp.l ? 1 : 0);
-        this.vx = dir * WALK;
+        this._walkBack = dir !== 0 && dir !== this.facing;   // 背向移动
+        this.vx = dir * WALK * (this._walkBack ? 0.8 : 1);
         const ns = this.grounded ? (dir ? 'walk' : 'idle') : 'jump';
         if (this.state !== ns) { this.state = ns; this.st = 0; }
       }
     } else {
       const dir = (inp.r ? 1 : 0) - (inp.l ? 1 : 0);
-      this.vx += dir * WALK * 2.4 * dt;
+      this.vx += dir * WALK * 3.0 * dt;
       this.vx = clamp(this.vx, -WALK, WALK);
-      if (this.pressed(inp, 'lt') && !this.airAtk) { this.airAtk = true; this.startAtk('light'); }
+      if (!this.airAtk) this.tryAction(tap, inp);
     }
 
-    // 面向对手（非攻击时）
-    if (opp && this.state !== 'light' && this.state !== 'heavy' && this.state !== 'special')
-      this.facing = opp.x >= this.x ? 1 : -1;
+    // 面向对手（非攻击/闪避时），带 12px 滞回防抖，翻转带过渡动画
+    if (opp && !ATK[this.state] && this.state !== 'dodge' && Math.abs(opp.x - this.x) > 12) {
+      const nf = opp.x >= this.x ? 1 : -1;
+      if (nf !== this.facing) { this._oldFacing = this.facing; this.facing = nf; this.turnT = 0.15; }
+    }
 
     this.physics(dt);
     this.prevIn = inp;
   }
   physics(dt) {
-    this.x += this.vx * dt; this.y += this.vy * dt;
-    if (!this.grounded || this.vy < 0) this.vy += GRAV * dt;
+    this.x += this.vx * dt + (this.kbV || 0) * dt; this.y += this.vy * dt;
+    this.kbV = (this.kbV || 0) * Math.pow(this.grounded ? 0.02 : 0.5, dt);   // 空中阻力小，打飞能飞远撞墙
+    if (!this.grounded || this.vy < 0) {
+      // KOF 式顶点滞空：跳跃最高点附近重力减弱，出手/出腿更从容
+      const hang = this.vy > -230 && this.vy < 280;
+      this.vy += GRAV * (hang ? 0.78 : 1) * dt;
+    }
     if (this.y >= GROUND) {
-      if (this.state === 'ko' && this.vy > 250) {
+      if ((this.state === 'ko' || this.state === 'down') && this.vy > 250) {
         if (this.vy > 430) burst(this.x, GROUND, 8, '#8a93a3', 200, 3);
         this.y = GROUND; this.vy *= -0.34; this.vx *= 0.55;
       } else { this.y = GROUND; this.vy = 0; }
     }
     this.x = clamp(this.x, 60, W - 60);
+    // 撞墙反弹：打飞撞墙会弹回（火花+震屏）
+    if ((this.kbV || 0) < -200 && this.x <= 60.5) {
+      this.kbV = -this.kbV * 0.45;
+      burst(60, this.y - 100, 12, '#8a93a3', 280, 3);
+      shake = Math.max(shake, 10); sfx.block();
+    } else if ((this.kbV || 0) > 200 && this.x >= W - 60.5) {
+      this.kbV = -this.kbV * 0.45;
+      burst(W - 60, this.y - 100, 12, '#8a93a3', 280, 3);
+      shake = Math.max(shake, 10); sfx.block();
+    }
+  }
+  startDodge(inp) {
+    this.state = 'dodge'; this.st = 0; this.atk = null; this.hasHit = false;
+    this.dodgeCd = 0.7;
+    const back = (inp.l && this.facing === 1) || (inp.r && this.facing === -1);
+    this._dodgeDir = back ? -1 : 1;                                  // 1=前滚 -1=后滚
+    this.dodgeVX = this.facing * this._dodgeDir * 730;
+    this.vx = this.dodgeVX;
+    sfx.dodge();
   }
   tryHit(opp, d) {
+    if (opp.state === 'dodge' || (opp.dodgeGrace || 0) > 0) return;   // 闪避无敌：整滚+起身保护
+    if (opp.state === 'down' || opp.state === 'ko') return; // 倒地/KO 无敌
+    if (opp.state === 'ult') return;                        // 大招优先级最高：出招全程免疫，不可被打断
     const dx = (opp.x - this.x) * this.facing;
-    if (dx < -34 || dx > d.range || Math.abs(opp.y - this.y) > 140 || opp.state === 'ko') return;
+    if (dx < -34 || dx > d.range || Math.abs(opp.y - this.y) > 175) return;
     this.hasHit = true;
-    const mx = (this.x + opp.x) / 2, my = this.y - 105;
-    if (opp.state === 'block' && opp.grounded) {           // 格挡成功
-      opp.hp = Math.max(1, opp.hp - d.dmg * 0.12);
-      opp.vx = this.facing * d.kb * 0.35;
+    const mx = (this.x + opp.x) / 2, my = Math.min(this.y, opp.y) - 100;
+    this.applyHit(opp, d, mx, my);
+  }
+  tryHit(opp, d) {
+    if (opp.state === 'dodge' && opp.st < 0.3) return;     // 闪避无敌帧
+    if (opp.state === 'dp' && opp.st < 0.32) return;       // 升龙出手无敌
+    if (opp.state === 'down' || opp.state === 'ko') return; // 倒地/KO 无敌
+    const dx = (opp.x - this.x) * this.facing;
+    if (dx < -34 || dx > d.range || Math.abs(opp.y - this.y) > 175) return;
+    this.hasHit = true;
+    const mx = (this.x + opp.x) / 2, my = Math.min(this.y, opp.y) - 100;
+    this.applyHit(opp, d, mx, my);
+  }
+  applyHit(opp, d, mx, my) {
+    if (opp.state === 'down' || opp.state === 'ko') return;      // 倒地/KO 无敌
+    const dir = opp.x >= this.x ? 1 : -1;
+    opp.hitFlash = 1;
+    const combo = opp.comboTimer > 0 ? (opp.comboHits || 0) + 1 : 1;   // 连段计时器内累计，不因瞬间恢复清零
+    opp.comboHits = combo;
+    opp.comboTimer = 0.6;
+    const scale = Math.max(0.5, 1 - 0.12 * (combo - 1));         // 伤害递减
+    const dmg = d.dmg * scale;
+    // 反无限连四件套（照抄 UNI/BB 机制）：
+    // ① 硬直衰减：第4击起每击-22%，对手逐渐挣脱
+    const stunScale = combo >= 4 ? Math.max(0.25, 1 - 0.22 * (combo - 3)) : 1;
+    // ② 浮空衰减：第3次浮空起每次-30%，无法永久空连
+    const juggleScale = Math.max(0.4, 1 - 0.3 * Math.max(0, combo - 2));
+    // ③ 击退增长：连段越长推得越远，自然脱离攻击范围
+    const kbGrow = 1 + 0.18 * (combo - 1);
+    sparks.push({ x: mx, y: my, t: 0, max: d.big ? 0.28 : 0.18, big: !!d.big });
+    if (opp.state === 'crouch' && !d.knockdown && !d.launch) {   // 下段防御
+      opp.hp = Math.max(1, opp.hp - dmg * 0.12);
+      opp.kbV = dir * d.kb * 0.35 * kbGrow;
       opp.blockFlash = 1;
       this.meter = clamp(this.meter + d.mtr * 0.4, 0, 100);
       opp.meter  = clamp(opp.meter + d.mtr * 0.3, 0, 100);
       burst(mx, my, 6, '#9fd0ff', 240, 3);
-      freezeT = Math.max(freezeT, 0.03); sfx.block();
+      freezeT = Math.max(freezeT, 0.04); sfx.block();
       this.ev.push({ t:'hit', x:mx, y:my, b:0, blk:1 });
-    } else {                                               // 命中
-      opp.hp -= d.dmg;
-      opp.state = 'hitstun'; opp.st = 0; opp.hitT = d.hitstun; opp.atk = null;
-      opp.vx = this.facing * d.kb;
-      if (d.launch) { opp.vy = -430; opp.y -= 2; }
-      this.meter = clamp(this.meter + d.mtr, 0, 100);
-      opp.meter  = clamp(opp.meter + d.mtr * 0.5, 0, 100);
-      burst(mx, my, d.big ? 18 : 9, '#ffd257', d.big ? 420 : 280, d.big ? 4 : 3);
-      burst(mx, my, d.big ? 8 : 4, '#ff5555', 200, 3);
-      shake = Math.max(shake, d.big ? 15 : 7);
-      freezeT = Math.max(freezeT, d.big ? 0.1 : 0.05);
-      sfx.hit(d.big);
-      this.ev.push({ t:'hit', x:mx, y:my, b:d.big?1:0 });
+      return;
     }
+    opp.hp -= dmg;
+    if (d.knockdown) {                                     // 击倒
+      opp.state = 'down'; opp.st = 0; opp.atk = null;
+      opp.vy = -300; opp.vx = dir * Math.max(220, d.kb * 0.6); opp.y -= 2;
+      sfx.sweep();
+    } else {
+      opp.state = 'hitstun'; opp.st = 0; opp.atk = null;
+      opp.hitT = d.hitstun * stunScale;
+      opp.vx = 0; opp.kbV = dir * d.kb * kbGrow;         // 击退走 kbV，恢复后仍会滑行完整结算
+      if (d.dp) {
+        opp.vy = -780; opp.kbV = dir * 1100; opp.y -= 4;      // 升龙：狠狠打飞（空中阻力低，能撞墙）
+        flashA = Math.max(flashA, 0.38); slowMo = Math.max(slowMo, 0.3);
+        shake = Math.max(shake, 24); zoomT = Math.max(zoomT, 0.12);
+        slashMarks.push({ x: mx, y: my, a: dir > 0 ? -0.7 : Math.PI + 0.7, t: 0, max: 0.34, big: true, col: '#ffd257' });
+        slashMarks.push({ x: mx, y: my - 18, a: dir > 0 ? -1.15 : Math.PI + 1.15, t: 0, max: 0.26, big: false, col: '#fff3b0' });
+      }
+      else if (d.launch) { opp.vy = -460 * juggleScale; opp.y -= 2; }
+      if (d.big) flashA = Math.max(flashA, 0.22);
+    }
+    // ④ 墙角反推：把对手顶进墙角时攻击者自己被弹开
+    if (this.grounded && (this.x <= 100 || this.x >= W - 100)) this.vx = -dir * 220;
+    this.meter = clamp(this.meter + d.mtr, 0, 100);
+    opp.meter  = clamp(opp.meter + d.mtr * 0.5, 0, 100);
+    if (this.meter >= 100 && !this._maxReady) {         // MAX：金环+琶音提示
+      this._maxReady = true; sfx.max();
+      sparks.push({ x: this.x, y: this.y - 95, t: 0, max: 0.5, big: true });
+      burst(this.x, this.y - 95, 12, '#ffd257', 300, 3);
+      this.ev.push({ t:'hit', x:this.x, y:this.y - 95, b:1 });
+    }
+    burst(mx, my, d.big ? 18 : 9, '#ffd257', d.big ? 420 : 280, d.big ? 4 : 3);
+    burst(mx, my, d.big ? 8 : 4, '#ff5555', 200, 3);
+    shake = Math.max(shake, d.big ? 18 : 9);
+    freezeT = Math.max(freezeT, d.big ? 0.14 : 0.075);
+    if (d.big) zoomT = 0.1;
+    sfx.hit(d.big);
+    this.ev.push({ t:'hit', x:mx, y:my, b:d.big?1:0 });
+    if (d.knockdown) this.ev.push({ t:'down' });
   }
 
   /* ---- 姿态计算：返回局部坐标关节点 ---- */
@@ -293,8 +805,8 @@ class Fighter {
     // 姿态插值：关键帧之间平滑过渡，攻击/倒地用更快收敛保持打击感
     const T = this.computeTargetPose();
     const dt = this._pdt || 1 / 60;
-    const fast = this.state === 'light' || this.state === 'heavy' || this.state === 'special' || this.state === 'ko';
-    const a = 1 - Math.exp(-dt * (fast ? 26 : 14));
+    const fast = !!ATK[this.state] || this.state === 'ko' || this.state === 'walk' || this.state === 'dodge' || this.state === 'jump';
+    const a = 1 - Math.exp(-dt * (fast ? 30 : 22));
     if (!this._pose) { this._pose = T; return T; }
     const P = this._pose;
     for (const k in T) P[k] += (T[k] - P[k]) * a;
@@ -303,52 +815,339 @@ class Fighter {
   computeTargetPose() {
     const t = this.st, s = this.state;
     const vy = this.vy || 0, ht = this.hitT || 0;
-    let lean = 0.06, hipDrop = 0, rot = 0;
-    let aF = 0.42, bF = 0.35, aB = -0.34, bB = 0.4;       // 前/后臂 肩角+肘弯
-    let tF = 0.1, kF = 0.12, tB = -0.1, kB = 0.15;        // 前/后腿 髋角+膝弯
+    let lean = 0.08, hipDrop = 0, rot = 0, squash = 1;
+    let legFO = null, legBO = null;                       // 行走时用 IK 直接给膝/脚坐标
+    let aF = 0.55, bF = 1.3, aB = 0.3, bB = 1.45;         // 前/后臂 默认抱架
+    let tF = 0.16, kF = 0.3, tB = -0.14, kB = 0.24;       // 前/后腿 髋角+膝弯
     if (s === 'idle') {
+      // 草薙京式站姿：前手前探下压、后手收肘抱拳于腰间、重心低、膝盖内扣
       const br = Math.sin(t * 2.2);
-      lean = 0.06 + br * 0.02; aF += br * 0.05; aB -= br * 0.05;
+      lean = 0.16 + br * 0.015;
+      hipDrop = 9 + br * 1.5;
+      aF = 1.12 + br * 0.05; bF = 0.12 + br * 0.06;
+      aB = -0.55 - br * 0.04; bB = 1.95 + br * 0.08;
+      legFO = legIK(22, 0, -80 + hipDrop); legBO = legIK(-18, 0, -80 + hipDrop);
     } else if (s === 'walk') {
-      const ph = t * 11, sn = Math.sin(ph);
-      tF = sn * 0.62;  kF = tF + 0.4 + Math.max(0, Math.cos(ph)) * 0.45;
-      tB = -sn * 0.62; kB = tB + 0.4 + Math.max(0, -Math.cos(ph)) * 0.45;
-      aF = 0.12 - sn * 0.55; aB = -0.1 + sn * 0.55; bF = bB = 0.45;
-      lean = 0.1; hipDrop = Math.abs(sn) * 4;
+      // 步行周期（参考 Contact-Down-Passing-Up 四关键帧）：
+      // 支撑段脚速=移速(零滑动) / Down 落最低(膝自动吸收) / Passing 提膝 / Up 最高
+      const S = 52, lift = 22;
+      const om = 9.98 * (this._walkBack ? -0.8 : 1);      // 倒走：相位反转+步频匹配 0.8 倍速
+      const ph = (((t * om) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      const u = (ph % Math.PI) / Math.PI;                 // 单步内进度 0=Contact 1=下次Contact
+      hipDrop = 11 + 2.5 * Math.cos(2 * Math.PI * (u - 0.29));  // Down(u.29)最低 Up(u.79)最高
+      lean = 0.12 + 0.02 * Math.sin(2 * ph);
+      const footAt = p => {
+        p %= 2 * Math.PI;                                            // 相位必须归一
+        let fx, fy;
+        if (p < Math.PI) { fx = S - (2 * S / Math.PI) * p; fy = 0; }   // 支撑：匀速后移=移速
+        else { const q = (p - Math.PI) / Math.PI; fx = -S + 2 * S * q; fy = -lift * Math.sin(Math.PI * q); }
+        return legIK(fx, fy, -80 + hipDrop);
+      };
+      legFO = footAt(ph);
+      legBO = footAt(ph + Math.PI);
+      const ap = ph - 0.8;                                // 手臂滞后 0.8rad
+      aF = 0.08 - 0.58 * Math.cos(ap); bF = 0.95 + 0.3 * Math.max(0, Math.cos(ap));
+      aB = 0.55 * Math.cos(ap) + 0.1; bB = 0.95 + 0.3 * Math.max(0, -Math.cos(ap));
+    } else if (s === 'prejump') {
+      // 起跳预备：压低、手臂后摆蓄力
+      const w = easeOut(clamp(t / 0.09, 0, 1));
+      hipDrop = 15 * w; lean = 0.2 * w;
+      aF = lerp(0.55, -0.5, w); bF = lerp(1.3, 1.1, w);
+      aB = lerp(0.3, 0.55, w); bB = 1.3;
+      legFO = legIK(16, 0, -80 + hipDrop); legBO = legIK(-16, 0, -80 + hipDrop);
     } else if (s === 'jump') {
-      const fv = clamp((vy + 500) / 1000, 0, 1);   // 0=上升 收腿 1=下落 伸腿准备落地
-      tF = lerp(-0.55, -0.05, fv); kF = lerp(1.0, 0.5, fv);
-      tB = lerp(0.35, 0.12, fv); kB = lerp(0.55, 0.32, fv);
-      aF = lerp(2.55, 2.15, fv); bF = lerp(-0.35, 0.12, fv); aB = 2.2; bB = 0.45; lean = 0.12;
-    } else if (s === 'light') {
-      const q = tri(t / ATK.light.dur, 0.3, 0.55);
-      aF = lerp(0.42, 1.3, q); bF = lerp(0.5, 0.02, q);
-      aB = -0.3 - 0.45 * q; bB = 0.8;
-      tF = 0.12 + 0.3 * q; tB = -0.12 - 0.25 * q; lean = 0.1 + 0.16 * q;
-    } else if (s === 'heavy') {
-      const D = ATK.heavy.dur, p = t / D;
-      if (p < 0.42) {
-        const w = easeOut(p / 0.42);
-        lean = -0.13 * w; aF = lerp(0.42, -0.85, w); bF = 0.9 * w; aB = -0.2; bB = 0.6;
-        tF = 0.1 - 0.15 * w; tB = -0.1 - 0.2 * w; hipDrop = 5 * w;
+      // 蹬地伸展 → 深收腿悬浮 → 落地前伸；身体随水平速度倾角，手臂绕肩环抱流动
+      const r = clamp((vy + 830) / 1660, 0, 1);
+      const up = easeOut(clamp(r * 2.2, 0, 1));
+      const dn = easeIn(clamp((r - 0.45) * 2.2, 0, 1));
+      const drift = clamp((this.vx || 0) * this.facing / WALK, -1, 1) * 0.1;   // 前跳前倾/后跳后仰
+      squash = 1 + 0.08 * (1 - r) * (1 - dn * 0.6);
+      tF = lerp(lerp(0.08, -0.55, up), -0.08, dn);
+      kF = lerp(lerp(0.12, 1.3, up), 0.44, dn);
+      tB = lerp(lerp(0.06, 0.45, up), 0.14, dn);
+      kB = lerp(lerp(0.1, 0.68, up), 0.32, dn);
+      const armWave = Math.sin(r * Math.PI) * 0.25;                            // 顶点手臂回落
+      aF = lerp(lerp(1.75, 1.05, up), 0.7, dn) - armWave;
+      bF = lerp(lerp(-0.05, 0.35, up), 0.55, dn);
+      aB = lerp(lerp(1.25, 0.45, up), -0.4, dn) + armWave * 0.5;
+      bB = 0.4;
+      lean = 0.14 + drift;
+    } else if (s === 'land') {
+      // 落地卸力：压低缓冲后站直
+      const w = easeOut(clamp(t / 0.13, 0, 1));
+      squash = 1 - 0.09 * (1 - w);
+      hipDrop = 16 * (1 - w); lean = 0.16 * (1 - w);
+      aF = lerp(0.9, 0.55, w); bF = lerp(1.0, 1.3, w);
+      aB = lerp(0.5, 0.3, w); bB = 1.4;
+      legFO = legIK(20, 0, -80 + hipDrop); legBO = legIK(-18, 0, -80 + hipDrop);
+    } else if (s === 'lp') {
+      // 三段式刺拳：后拉蓄力 → 转肩爆发伸直 → 收招
+      const D = ATK.lp.dur, p = t / D;
+      if (p < 0.22) {
+        const w = easeOut(p / 0.22);
+        aF = lerp(0.55, -0.35, w); bF = lerp(1.3, 1.5, w);
+        aB = 0.2; bB = 1.3;
+        lean = lerp(0.08, -0.08, w); hipDrop = 3 * w;
+      } else if (p < 0.52) {
+        const w = easeOut((p - 0.22) / 0.3);
+        aF = lerp(-0.35, 1.72, w); bF = lerp(1.5, 0.0, w);
+        aB = lerp(0.2, -0.7, w); bB = 1.1;
+        lean = lerp(-0.08, 0.46, w);
+        tF = 0.16 + 0.25 * w; tB = -0.14 - 0.25 * w; hipDrop = 2;
       } else {
-        const w2 = easeOut(clamp((p - 0.42) / 0.2, 0, 1));
-        lean = lerp(-0.13, 0.34, w2); aF = lerp(-0.85, 1.55, w2); bF = lerp(0.9, 0.03, w2);
-        aB = -0.4; bB = 0.9; tF = lerp(-0.05, 0.5, w2); tB = lerp(-0.3, -0.45, w2); hipDrop = 6;
+        const w = easeIn(clamp((p - 0.52) / 0.48, 0, 1));
+        aF = lerp(1.62, 0.55, w); bF = lerp(0.0, 1.3, w);
+        aB = lerp(-0.7, 0.3, w); bB = lerp(1.1, 1.45, w);
+        lean = lerp(0.38, 0.08, w);
+        tF = lerp(0.41, 0.16, w); tB = lerp(-0.39, -0.14, w); hipDrop = lerp(2, 0, w);
       }
-    } else if (s === 'special') {
-      lean = 0.32; aF = 1.35; bF = 0.08; aB = 1.2; bB = 0.15;
-      tF = 0.85; kF = 0.25; tB = -0.75; kB = 0.3; hipDrop = 10;
-    } else if (s === 'block') {
-      aF = 0.95; bF = 1.55; aB = 0.7; bB = 1.65; lean = -0.05; hipDrop = 6;
+    } else if (s === 'lk') {
+      // 提膝蓄力 → 弹踢 → 收腿
+      const D = ATK.lk.dur, p = t / D;
+      if (p < 0.3) {
+        const w = easeOut(p / 0.3);
+        tF = lerp(0.16, 0.75, w); kF = lerp(0.4, 1.7, w);
+        lean = lerp(0.08, 0, w); hipDrop = 3;
+        aF = 0.5; bF = 1.2; aB = 0.2; bB = 1.4;
+      } else {
+        const w = easeOut(clamp((p - 0.3) / 0.25, 0, 1));
+        const r = easeIn(clamp((p - 0.55) / 0.45, 0, 1));
+        const e = w * (1 - r);
+        tF = lerp(0.75, 1.22, e); kF = lerp(1.7, tF + 0.15, e);
+        lean = lerp(0, -0.12, e); hipDrop = 3 - 2 * e;
+        aF = lerp(0.5, 0.1, e); bF = 1.2; aB = lerp(0.2, -0.4, e); bB = 1.4;
+      }
+    } else if (s === 'hp') {
+      // 大摆拳：深后拉 → 转腰抡出带跨步 → 大幅跟随
+      const D = ATK.hp.dur, p = t / D;
+      if (p < 0.38) {
+        const w = easeOut(p / 0.38);
+        lean = lerp(0.08, -0.3, w); hipDrop = lerp(0, 10, w);
+        aF = lerp(0.55, -1.15, w); bF = lerp(1.3, 0.85, w);
+        aB = lerp(0.3, 0.5, w); bB = lerp(1.45, 1.2, w);
+        tF = lerp(0.16, -0.3, w); kF = lerp(0.3, 0.7, w);
+        tB = lerp(-0.14, 0.25, w); kB = 0.3;
+      } else {
+        const w = easeOut(clamp((p - 0.38) / 0.24, 0, 1));
+        lean = lerp(-0.3, 0.6, w); hipDrop = lerp(10, 4, w);
+        aF = lerp(-1.15, 1.88, w); bF = lerp(0.85, 0.0, w);
+        aB = lerp(0.5, -0.85, w); bB = lerp(1.2, 0.35, w);
+        tF = lerp(-0.3, 0.65, w); kF = lerp(0.7, 0.15, w);
+        tB = lerp(0.25, -0.55, w); kB = 0.35;
+      }
+    } else if (s === 'hk') {
+      const D = ATK.hk.dur, p = t / D;
+      if (p < 0.36) {
+        const w = easeOut(p / 0.36);
+        lean = 0.08; hipDrop = 9 * w;
+        tF = lerp(0.12, -0.25, w); kF = lerp(0.4, 1.15, w);
+        tB = 0.2; kB = 0.35;
+        aF = 0.5; bF = 0.8; aB = -0.5 * w; bB = 0.7;
+      } else {
+        const w2 = easeOut(clamp((p - 0.36) / 0.22, 0, 1));
+        lean = lerp(0.08, -0.32, w2); hipDrop = 5;
+        tF = lerp(-0.25, 1.66, w2); kF = lerp(1.15, tF + 0.1, w2);
+        tB = 0.3; kB = 0.3;
+        aF = lerp(0.5, -0.6, w2); bF = 0.5; aB = lerp(-0.5, 1.1, w2); bB = 0.3;
+      }
+    } else if (s === 'dodge') {
+      // KOF 紧急回避三段：俯冲入滚 → 抱膝成球贴地滚 → 展身立起
+      const p = clamp(t / 0.55, 0, 1);
+      const dr = this._dodgeDir || 1;
+      if (p < 0.14) {                                        // 俯冲：前倾探臂
+        const w = easeOut(p / 0.14);
+        lean = 0.58 * w; hipDrop = 20 * w;
+        aF = lerp(0.55, 1.5, w); bF = lerp(0.12, 0.7, w);
+        aB = lerp(-0.55, -0.25, w); bB = 2.0;
+        legFO = legIK(22, 0, -80 + hipDrop); legBO = legIK(-24, 0, -80 + hipDrop);
+      } else if (p < 0.72) {                                 // 成球：抱膝团身贴地滚
+        const w = smoothstep((p - 0.14) / 0.58);
+        rot = dr * Math.PI * 2 * 0.93 * w;
+        lean = 0.5; hipDrop = 36;
+        aF = 2.05; bF = 2.15; aB = 1.7; bB = 2.1;
+        tF = 0.95; kF = 2.25; tB = 0.55; kB = 2.1;
+      } else {                                               // 展身：转完最后一角立起
+        const w = easeOut((p - 0.72) / 0.28);
+        rot = dr * Math.PI * 2 * (0.93 + 0.07 * w);
+        hipDrop = lerp(36, 7, w); lean = lerp(0.5, 0.16, w);
+        aF = lerp(2.05, 1.12, w); bF = lerp(2.15, 0.12, w);
+        aB = lerp(1.7, -0.55, w); bB = lerp(2.1, 1.95, w);
+        legFO = legIK(19, 0, -80 + hipDrop); legBO = legIK(-17, 0, -80 + hipDrop);
+      }
+    } else if (s === 'dp') {
+      // 升龙拳：极短蓄力（无前摇感）→ 爆发拳贯天 → 长后摇缓落
+      const D = ATK.dp.dur, p = t / D;
+      if (p < 0.06) {                                           // 3.6 帧微蹲即起
+        const w = easeOut(p / 0.06);
+        hipDrop = 18 * w; lean = 0.3 * w;
+        aF = lerp(0.55, -0.8, w); bF = lerp(1.3, 2.15, w);
+        aB = lerp(0.3, 0.5, w); bB = 1.45;
+        legFO = legIK(9, 0, -80 + hipDrop); legBO = legIK(-15, 0, -80 + hipDrop);
+      } else {                                                  // 上升：拳贯天、躯干后仰拉弓
+        const w = easeOut(clamp((p - 0.06) / 0.16, 0, 1));      // 0.16 内完成伸展
+        const r = easeIn(clamp((p - 0.55) / 0.45, 0, 1));
+        const e = w * (1 - r * 0.35);
+        hipDrop = lerp(18, -10, e);
+        lean = lerp(0.3, -0.4, e);                              // 大幅后仰拉弓
+        aF = lerp(-0.8, 3.08, e); bF = lerp(2.15, 0.0, e);      // 拳直冲天
+        aB = lerp(0.5, -1.05, e); bB = lerp(1.45, 0.45, e);     // 后臂甩开
+        tF = lerp(0.2, -0.72, e); kF = lerp(0.5, 1.55, e);      // 提膝
+        tB = lerp(-0.15, 0.52, e); kB = 0.32;
+      }
+    } else if (s === 'ult') {
+      if (t < 0.28 || !this.hasHit) {
+        // 冲刺爪姿
+        lean = 0.5; aF = 1.7; bF = 0.7; aB = 1.35; bB = 0.85;
+        tF = 0.95; kF = 0.25; tB = -0.7; kB = 0.35; hipDrop = 10;
+      } else if (this.st - this.grabT < 0.2) {
+        // 举起：单臂高举掐住对方
+        lean = 0.1; aF = 2.35; bF = 0.3; aB = 0.3; bB = 1.3; hipDrop = 6;
+        legFO = legIK(20, 0, -86); legBO = legIK(-16, 0, -86);
+      } else {
+        // 按地连打：俯身抓压，双爪交替锤击
+        lean = 0.55; hipDrop = 26;
+        const sw = Math.sin(t * 15) * 0.5 + 0.5;
+        aF = lerp(0.6, 2.2, sw); bF = lerp(1.2, 0.1, sw);
+        aB = lerp(1.4, 0.5, sw); bB = lerp(0.3, 1.1, sw);
+        legFO = legIK(26, 0, -80 + hipDrop); legBO = legIK(-20, 0, -80 + hipDrop);
+      }
+    } else if (s === 'grabbed') {
+      if (this._lifted) {
+        // 被举起：掐着悬空，双腿乱蹬
+        const kick = Math.sin(this.st * 18);
+        lean = -0.2; hipDrop = 0;
+        aF = -0.9 + kick * 0.3; bF = -0.5; aB = -1.1; bB = -0.4;
+        tF = -0.4 + kick * 0.5; kF = 0.9; tB = 0.3 - kick * 0.3; kB = 0.5;
+      } else if (this._slammed) {
+        // 被摔平在地上：躺平 + 被按着打时颤动
+        const wob = Math.sin(this.st * 44) * 0.12;
+        rot = -Math.PI / 2; hipDrop = 74;
+        aF = 0.4 + wob; bF = 0.3; aB = -0.45 + wob; bB = 0.3;
+        tF = 0.25; kF = 0.3; tB = -0.2; kB = 0.35;
+      } else {
+        // 被抓起：身体后仰挣扎
+        const wob = Math.sin(this.st * 40) * 0.5 + 0.5;
+        lean = -0.28 - wob * 0.15; hipDrop = 8;
+        aF = -0.7 + wob * 0.5; bF = -0.4; aB = -1.0 + wob * 0.3; bB = -0.3;
+        legFO = legIK(12, 0, -80 + hipDrop); legBO = legIK(-12, 0, -80 + hipDrop);
+      }
+    } else if (s === 'fb') {
+      // 发波：沉身双掌前推；超必杀更大
+      const D = ATK[s].dur, p = t / D;
+      const w = easeOut(clamp(p / 0.35, 0, 1)) * (1 - easeIn(clamp((p - 0.6) / 0.4, 0, 1)));
+      hipDrop = 10 + 8 * w; lean = 0.08 + 0.24 * w;
+      aF = lerp(0.55, 1.5, w); bF = lerp(1.3, 0.15, w);
+      aB = lerp(0.3, 1.35, w); bB = lerp(1.45, 0.2, w);
+      tF = lerp(0.16, 0.55, w); kF = lerp(0.3, 0.9, w); tB = lerp(-0.14, -0.5, w); kB = 0.5;
+    } else if (s === 'crouch' || s === 'clp' || s === 'clk' || s === 'chp' || s === 'chk') {
+      // 下蹲族：IK 深蹲（髋降至 -52 附近），招式各有独立动作
+      hipDrop = 28; lean = 0.22;
+      aF = 0.6; bF = 1.5; aB = 0.35; bB = 1.55;
+      let fx = 22, hy = -80 + hipDrop;
+      if (s === 'clp') {
+        const q = tri(t / ATK.clp.dur, 0.3, 0.55);
+        aF = lerp(0.6, 1.45, q); bF = lerp(1.5, 0.05, q); lean = 0.3 + 0.1 * q;
+      }
+      if (s === 'clk') {
+        const q = tri(t / ATK.clk.dur, 0.35, 0.6);
+        fx = lerp(22, 46, q); lean = 0.15; hipDrop = 30; hy = -80 + hipDrop;
+      }
+      if (s === 'chp') {                        // 上勾拳：沉→升，对空
+        const D = ATK.chp.dur, p = t / D;
+        if (p < 0.4) { const w = easeOut(p / 0.4); aF = lerp(0.6, -0.5, w); bF = lerp(1.5, 2.0, w); hipDrop = 34; lean = 0.3; }
+        else { const w = easeOut(clamp((p - 0.4) / 0.25, 0, 1)); aF = lerp(-0.5, 2.25, w); bF = lerp(2.0, 0.1, w); hipDrop = lerp(34, 14, w); lean = lerp(0.3, 0.02, w); }
+        hy = -80 + hipDrop;
+      }
+      if (s === 'chk') {                        // 扫堂腿：坐地扫出
+        const D = ATK.chk.dur, p = t / D;
+        const w = easeOut(clamp((p - 0.3) / 0.25, 0, 1));
+        hipDrop = 36; lean = 0.35; hy = -80 + hipDrop;
+        fx = lerp(22, 52, w);
+        aF = 0.2 - 0.5 * w; bF = 1.0; aB = -0.6 * w; bB = 1.2;
+      }
+      legFO = legIK(fx, 0, hy);
+      legBO = legIK(-18, 0, hy);
+    } else if (s === 'alp') {
+      // 空中轻拳 v2「飞身直拳」：身体水平前扑，拳完全伸直前下方砸刺
+      const D = ATK.alp.dur, p = t / D;
+      const q = tri(p, 0.22, 0.5), r = easeIn(clamp((p - 0.6) / 0.4, 0, 1)), e = q * (1 - r * 0.4);
+      lean = 0.18 + 0.5 * e;                                  // 大幅前扑
+      aF = lerp(0.55, 1.95, e); bF = lerp(1.3, 0.0, e);       // 拳全力前伸
+      aB = lerp(0.2, -1.15, e); bB = 0.9;                     // 后手大幅后甩
+      tF = lerp(-0.4, -0.1, e); kF = lerp(0.85, 0.6, e);
+      tB = lerp(0.4, 0.35, e); kB = lerp(0.5, 0.85, e);       // 后腿拖尾
+    } else if (s === 'ahp') {
+      // 空中重拳 v2「抡锤下砸」：手臂过头大回环，全身拧转下劈
+      const D = ATK.ahp.dur, p = t / D;
+      if (p < 0.28) {
+        const w = easeOut(p / 0.28);
+        aF = lerp(0.55, -1.35, w); bF = 1.5; lean = lerp(0.15, -0.28, w);
+        aB = lerp(0.3, 1.1, w); bB = 1.2;
+        tF = lerp(-0.45, -0.6, w); kF = lerp(0.95, 1.3, w);
+        tB = 0.5; kB = 0.6;
+      } else {
+        const w = easeOut(clamp((p - 0.28) / 0.26, 0, 1));
+        const r = easeIn(clamp((p - 0.6) / 0.4, 0, 1)), e = w * (1 - r * 0.5);
+        aF = lerp(-1.35, 2.45, e); bF = lerp(1.5, 0.0, e);    // 大弧抡到前下
+        aB = lerp(1.1, -1.2, e); bB = 0.9;
+        tF = lerp(-0.6, 0.15, e); kF = lerp(1.3, 0.4, e);
+        tB = lerp(0.5, -0.3, e); kB = lerp(0.6, 1.1, e);
+        lean = lerp(-0.28, 0.62, e);                          // 拧转下压
+      }
+    } else if (s === 'alk') {
+      // 空中轻腿 v2「飞膝」：膝盖顶到胸口高度，身体后仰蓄势弹出
+      const D = ATK.alk.dur, p = t / D;
+      if (p < 0.28) {
+        const w = easeOut(p / 0.28);
+        tF = lerp(-0.4, 0.55, w); kF = lerp(0.9, 1.85, w);    // 膝提到极限
+        lean = lerp(0.15, -0.2, w);
+        aF = lerp(0.4, 1.3, w); bF = 1.1; aB = lerp(-0.2, -0.9, w); bB = 1.0;
+        tB = 0.35; kB = 0.55;
+      } else {
+        const w = easeOut(clamp((p - 0.28) / 0.24, 0, 1));
+        const r = easeIn(clamp((p - 0.56) / 0.44, 0, 1)), e = w * (1 - r * 0.45);
+        tF = lerp(0.55, 1.18, e); kF = lerp(1.85, tF + 0.1, e);   // 小腿弹直
+        lean = lerp(-0.2, -0.42, e);                          // 挺腹后仰
+        aF = lerp(1.3, 0.7, e); bF = 1.1; aB = lerp(-0.9, -1.4, e); bB = 0.9;
+        tB = 0.3; kB = 0.5;
+      }
+    } else if (s === 'ahk') {
+      // 空中重腿 v2「箭步分腿飞踢」：踢腿近乎水平伸直、后腿反折贴臀、大后仰、双臂完全张开
+      const D = ATK.ahk.dur, p = t / D;
+      if (p < 0.2) {
+        const w = easeOut(p / 0.2);
+        tF = lerp(-0.4, 0.3, w); kF = lerp(0.9, 1.7, w);
+        lean = lerp(0.15, 0.05, w);
+        aF = 0.4; bF = 1.2; aB = -0.3; bB = 0.9;
+        tB = 0.35; kB = 0.5;
+      } else {
+        const w = easeOut(clamp((p - 0.2) / 0.22, 0, 1));
+        const r = easeIn(clamp((p - 0.64) / 0.36, 0, 1)), e = w * (1 - r * 0.45);
+        tF = lerp(0.3, 1.48, e); kF = lerp(1.7, tF + 0.02, e);   // 踢腿几乎水平伸直
+        tB = lerp(0.35, -0.95, e); kB = lerp(0.5, 2.35, e);      // 后腿反折贴臀
+        aF = lerp(0.4, -1.35, e); bF = 0.7;                       // 前臂后展
+        aB = lerp(-0.3, 1.55, e); bB = 0.3;                       // 后臂前上扬
+        lean = lerp(0.05, -0.5, e);                               // 大后仰
+      }
+    } else if (s === 'down') {
+      // 击倒：倒下→躺→起身
+      const fall = smoothstep(clamp(t / 0.3, 0, 1));
+      const rise = smoothstep(clamp((t - 0.95) / 0.4, 0, 1));
+      const k = fall * (1 - rise);
+      rot = -Math.PI / 2 * k; hipDrop = 74 * k;
+      aF = lerp(0.55, 0.5, k); bF = lerp(1.3, 0.3, k); aB = lerp(0.3, -0.5, k); bB = 0.3;
+      tF = lerp(0.16, 0.3, k); kF = 0.3; tB = lerp(-0.14, -0.25, k); kB = 0.35;
     } else if (s === 'hitstun') {
-      const wob = Math.sin(t * 36) * clamp(ht * 3, 0, 1);
-      lean = -0.32 + wob * 0.07; aF = -0.85 + wob * 0.15; bF = -0.3; aB = -0.5; bB = -0.2;
-      tF = -0.2 + wob * 0.1; kF = 0.4; tB = 0.25; kB = 0.3;
-      hipDrop = Math.abs(wob) * 3;
+      // 受击：头猛然后仰、双臂甩开，随硬直衰减回弹
+      const k = clamp(ht / 0.4, 0, 1);
+      const wob = Math.sin(t * 30) * k;
+      lean = -0.45 + wob * 0.08; hipDrop = 5 + 3 * Math.abs(wob);
+      aF = -1.2 + wob * 0.2; bF = -0.5; aB = -0.8; bB = -0.4;
+      legFO = legIK(-26, 0, -80 + hipDrop); legBO = legIK(20, 0, -80 + hipDrop);
     } else if (s === 'win') {
       aF = 2.85; bF = -0.2; aB = 2.7; bB = 0.25; lean = -0.04;
       hipDrop = Math.abs(Math.sin(t * 6)) * 8;
+      legFO = legIK(16, 0, -80 + hipDrop); legBO = legIK(-14, 0, -80 + hipDrop);
     } else if (s === 'ko') {
       // 短暂滞空后加速倾倒，肢体随倒地摊开
       const ss = smoothstep(clamp((t - 0.06) / 0.75, 0, 1));
@@ -356,28 +1155,48 @@ class Fighter {
       aF = 0.5 + (1 - ss) * 0.6; bF = 0.3; aB = -0.5 - (1 - ss) * 0.4; bB = 0.3;
       tF = 0.3 + (1 - ss) * 0.5; kF = 0.3 + (1 - ss) * 0.8; tB = -0.25; kB = 0.35;
     }
+    // KOF 式收招回落：普通招式最后 28% 时间内，上肢主动回落到接近站架
+    // 出招结束瞬间姿态已≈抱架，与 idle/下一招衔接零跳变
+    if (ATK[s] && s !== 'fb' && s !== 'ult' && s !== 'dp') {
+      const p2 = t / ATK[s].dur;
+      if (p2 > 0.72) {
+        const w = (p2 - 0.72) / 0.28 * 0.62;
+        lean = lerp(lean, 0.16, w);
+        hipDrop = lerp(hipDrop, 9, w);
+        aF = lerp(aF, 1.12, w); bF = lerp(bF, 0.12, w);
+        aB = lerp(aB, -0.55, w); bB = lerp(bB, 1.95, w);
+      }
+    }
     // 关节坐标（局部，+x 为面朝方向）
     const hx = 0, hy = -80 + hipDrop;
-    const nx = hx + Math.sin(lean) * 62, ny = hy - Math.cos(lean) * 62;
+    const nx = hx + Math.sin(lean) * 58, ny = hy - Math.cos(lean) * 58;
     const hdx = nx + Math.sin(lean) * 20, hdy = ny - Math.cos(lean) * 20;
     const sx = nx, sy = ny + 6;
     const L = (x0, y0, a1, l1, a2, l2) => {
       const mx = x0 + Math.sin(a1) * l1, my = y0 + Math.cos(a1) * l1;
       return [mx, my, mx + Math.sin(a1 + a2) * l2, my + Math.cos(a1 + a2) * l2];
     };
-    const [exF, eyF, haX, haY] = L(sx, sy, aF, 30, bF, 28);
-    const [exB, eyB, hbX, hbY] = L(sx, sy, aB, 30, bB, 28);
-    const [knF, kyF, ftF, fyF] = L(hx, hy, tF, 42, kF - tF, 40);
-    const [knB, kyB, ftB, fyB] = L(hx, hy, tB, 42, kB - tB, 40);
+    const [exF, eyF, haX, haY] = L(sx, sy, aF, 32, bF, 30);
+    const [exB, eyB, hbX, hbY] = L(sx, sy, aB, 32, bB, 30);
+    const [knF, kyF, ftF, fyF] = legFO || L(hx, hy, tF, 46, kF - tF, 44);
+    const [knB, kyB, ftB, fyB] = legBO || L(hx, hy, tB, 46, kB - tB, 44);
     return { hx, hy, nx, ny, hdx, hdy, exF, eyF, haX, haY, exB, eyB, hbX, hbY,
-             knF, kyF, ftF, fyF, knB, kyB, ftB, fyB, rot };
+             knF, kyF, ftF, fyF, knB, kyB, ftB, fyB, rot, squash };
   }
   draw(c, alpha) {
     const p = this.computePose();
     c.save();
-    c.globalAlpha = alpha == null ? 1 : alpha;
+    let a = alpha == null ? 1 : alpha;
+    if (this.state === 'down') a *= 0.62 + 0.38 * Math.sin(this.st * 26);                // 倒地无敌闪烁
+    else if (this.state === 'dodge' && this.st < 0.3) a *= 0.68 + 0.32 * Math.sin(this.st * 42);
+    c.globalAlpha = a;
+    const tp = this.turnT > 0 ? 1 - this.turnT / 0.15 : 1;
+    if (freezeT > 0 && (this.state === 'hitstun' || this.state === 'down' || (this.state === 'grabbed' && this._slammed)))
+      c.translate((Math.random() - 0.5) * 4.6, (Math.random() - 0.5) * 3.2);
+    const sxRaw = lerp(this._oldFacing == null ? this.facing : this._oldFacing, this.facing, easeOut(tp));
+    const sx = Math.abs(sxRaw) < 0.06 ? (sxRaw >= 0 ? 0.06 : -0.06) : sxRaw;   // 转身：宽度渐变过零
     c.translate(this.x, this.y);
-    c.scale(this.facing, 1);
+    c.scale(sx, p.squash || 1);
     // 倒地时绕髋部旋转
     if (p.rot) {
       c.translate(0, p.hy);
@@ -392,22 +1211,47 @@ class Fighter {
     seg(p.hx, p.hy, p.knB, p.kyB); seg(p.knB, p.kyB, p.ftB, p.fyB);
     seg(p.hx, p.hy, p.nx, p.ny);
     seg(p.nx, p.ny, p.exB, p.eyB); seg(p.exB, p.eyB, p.hbX, p.hbY);
-    c.globalAlpha = alpha == null ? 1 : alpha; c.lineWidth = 7;
+    c.globalAlpha = a; c.lineWidth = 7;
     seg(p.knF, p.kyF, p.ftF, p.fyF);
     seg(p.hx, p.hy, p.knF, p.kyF);
     seg(p.hx, p.hy, p.nx, p.ny);
     seg(p.nx, p.ny, p.exF, p.eyF); seg(p.exF, p.eyF, p.haX, p.haY);
     // 头
-    c.beginPath(); c.arc(p.hdx, p.hdy, 15, 0, Math.PI * 2);
+    c.beginPath(); c.arc(p.hdx, p.hdy, 14, 0, Math.PI * 2);
     c.fillStyle = '#12151a'; c.fill(); c.lineWidth = 6; c.stroke();
-    // 眼睛小点缀（面向前方）
+    // 脸部楔形+鼻子：朝向一目了然
     c.fillStyle = this.color;
-    c.beginPath(); c.arc(p.hdx + 7, p.hdy - 3, 2.4, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.moveTo(p.hdx, p.hdy);
+    c.arc(p.hdx, p.hdy, 14, -0.62, 0.62); c.closePath(); c.fill();
+    c.beginPath();
+    c.moveTo(p.hdx + 13, p.hdy - 2); c.lineTo(p.hdx + 20.5, p.hdy + 1); c.lineTo(p.hdx + 13, p.hdy + 5);
+    c.closePath(); c.fill();
+    c.fillStyle = '#12151a';
+    c.beginPath(); c.arc(p.hdx + 7.5, p.hdy - 3, 2.4, 0, Math.PI * 2); c.fill();
+    // 胸口中线（身体正面）
+    c.lineWidth = 4;
+    seg(p.nx + 4, p.ny + 9, lerp(p.nx, p.hx, 0.5) + 4, lerp(p.ny, p.hy, 0.5));
     // 格挡光效
     if (this.blockFlash > 0) {
       c.globalAlpha = this.blockFlash * 0.6;
       c.strokeStyle = '#9fd0ff'; c.lineWidth = 4;
       c.beginPath(); c.arc(0, -95, 55, -1.1, 1.1); c.stroke();
+    }
+    if ((this.hitFlash || 0) > 0.04) {
+      c.save();
+      c.globalAlpha = this.hitFlash * 0.85;
+      c.strokeStyle = '#ffffff'; c.lineWidth = 9;
+      c.translate(this.x, this.y); c.scale(sx, p.squash || 1);
+      if (p.rot) { c.translate(0, p.hy); c.rotate(p.rot); c.translate(0, -p.hy); }
+      c.beginPath();
+      c.moveTo(p.hx, p.hy); c.lineTo(p.nx, p.ny);
+      c.moveTo(p.nx, p.ny); c.lineTo(p.exF, p.eyF); c.lineTo(p.haX, p.haY);
+      c.moveTo(p.nx, p.ny); c.lineTo(p.exB, p.eyB); c.lineTo(p.hbX, p.hbY);
+      c.moveTo(p.hx, p.hy); c.lineTo(p.knF, p.kyF); c.lineTo(p.ftF, p.fyF);
+      c.moveTo(p.hx, p.hy); c.lineTo(p.knB, p.kyB); c.lineTo(p.ftB, p.fyB);
+      c.stroke();
+      c.beginPath(); c.arc(p.hdx, p.hdy, 15, 0, Math.PI * 2); c.stroke();
+      c.restore();
     }
     c.restore();
   }
@@ -415,32 +1259,81 @@ class Fighter {
 
 /* ---------------- AI ---------------- */
 class AI {
-  constructor(me, opp) { this.me = me; this.opp = opp; this.t = 0; this.o = { ...ZERO_IN }; }
+  constructor(me, opp) { this.me = me; this.opp = opp; this.t = 0; this.o = { ...ZERO_IN }; this.jumpPlan = 0; }
   input(dt) {
     this.t -= dt;
     const m = this.me, opp = this.opp;
     if (this.t <= 0) {
       this.t = 0.13 + Math.random() * 0.18;
-      const o = { l:0, r:0, u:0, d:0, lt:0, hv:0, sp:0 };
-      if (opp.state === 'ko') { this.o = o; return o; }
+      const o = { l:0,r:0,u:0,d:0,lp:0,lk:0,hp:0,hk:0,dg:0,sp:0 };
+      if (opp.state === 'ko' || opp.state === 'down') { this.o = o; return o; }
       const dx = opp.x - m.x, dist = Math.abs(dx), dir = dx >= 0 ? 1 : -1;
       const toward = dir > 0 ? 'r' : 'l', away = dir > 0 ? 'l' : 'r';
-      if (m.meter >= 100 && dist < 175 && Math.random() < 0.7) o.sp = 1;
-      else if (dist > 150) {
+      if (!m.grounded) {                                    // 空中：跳入攻击
+        if (this.jumpPlan && m.vy > -140) { o.hk = 1; this.jumpPlan = 0; }
+        else if (!m.airAtk && m.vy > -140) o.lp = 1;
+      } else if (m.meter >= 100 && dist < 560 && Math.random() < 0.45) {
+        m.fakeMotion('ult'); o.lp = 1;                      // 超必杀大波（AI 伪搓招）
+      } else if (m.fbCd <= 0 && dist > 270 && dist < 640 && Math.random() < 0.4) {
+        m.fakeMotion('fb'); o.lp = 1;                       // 中距离发波（AI 伪搓招）
+      } else if (!opp.grounded && dist < 175 && Math.random() < 0.65) {
+        o.d = 1; o.hp = 1;                                  // 对空：蹲重拳上勾
+      } else if (dist > 190) {
         o[toward] = 1;
-        if (Math.random() < 0.1) o.u = 1;
+        if (Math.random() < 0.12 && dist < 430) { o.u = 1; this.jumpPlan = 1; }  // 跳入
       } else {
         const r = Math.random();
-        const oppAtk = opp.state === 'light' || opp.state === 'heavy' || opp.state === 'special';
-        if (oppAtk && Math.random() < 0.45) o.d = 1;
-        else if (r < 0.4) o.lt = 1;
-        else if (r < 0.62) o.hv = 1;
-        else if (r < 0.78) o.d = 1;
+        const oppAtk = !!ATK[opp.state];
+        if (oppAtk && Math.random() < 0.18) o.dg = 1;
+        else if (oppAtk && Math.random() < 0.42) { o.d = 1; }
+        else if (r < 0.2) o.lp = 1;
+        else if (r < 0.38) o.lk = 1;
+        else if (r < 0.5) { o.d = 1; o.lp = 1; }            // 蹲轻拳
+        else if (r < 0.6) { o.d = 1; o.lk = 1; }            // 蹲轻腿
+        else if (r < 0.7) { o.d = 1; o.hk = 1; }            // 扫堂腿击倒
+        else if (r < 0.78) { m.fakeMotion('dp'); o.hp = 1; } // 升龙拳（AI 伪搓招+重拳）
+        else if (r < 0.88) o.hp = 1;
+        else if (r < 0.93) o.hk = 1;
         else o[away] = 1;
       }
       this.o = o;
     }
     return this.o;
+  }
+}
+
+/* ---------------- 气弹（发波/超必杀） ---------------- */
+class Projectile {
+  constructor(x, y, vx, owner, big) {
+    this.x = x; this.y = y; this.vx = vx; this.owner = owner; this.big = big;
+    this.dead = false; this.life = 0;
+  }
+  update(dt, opp) {
+    this.life += dt;
+    this.x += this.vx * dt;
+    for (let i = 0; i < 2; i++) particles.push({ x: this.x - Math.sign(this.vx) * (10 + i * 16), y: this.y + (Math.random() - 0.5) * 16,
+      vx: -this.vx * 0.1, vy: (Math.random() - 0.5) * 60, life: 0, max: 0.26, col: this.owner.color, sz: 5 - i, flame: true });
+    if (Math.random() < 0.5) particles.push({ x: this.x - Math.sign(this.vx) * 20, y: this.y + (Math.random() - 0.5) * 10,
+      vx: -this.vx * 0.5, vy: 0, life: 0, max: 0.14, col: this.owner.color, sz: 14, line: true });
+    if (opp.state !== 'ko' && opp.state !== 'down' && opp.state !== 'dp' && opp.state !== 'ult' && opp.state !== 'dodge' && !(opp.dodgeGrace > 0)) {
+      if (Math.abs(this.x - opp.x) < (this.big ? 30 : 20) + 16 && Math.abs(this.y - (opp.y - 90)) < 72) {
+        this.dead = true;
+        const d = this.big
+          ? { dmg:24, hitstun:.55, kb:780, mtr:16, big:true, launch:true, knockdown:true }
+          : { dmg:12, hitstun:.34, kb:300, mtr:10 };
+        this.owner.applyHit(opp, d, (this.x + opp.x) / 2, this.y);
+        burst(this.x, this.y, this.big ? 26 : 14, this.owner.color, this.big ? 460 : 340, 4);
+        slashMarks.push({ x: this.x, y: this.y, a: Math.random() * Math.PI, t: 0, max: 0.3, big: !!this.big, col: this.owner.color });
+        flame(this.x, this.y, this.big ? 18 : 8, this.owner.color);
+        flashA = Math.max(flashA, this.big ? 0.35 : 0.18);
+        shake = Math.max(shake, this.big ? 20 : 12);
+        zoomT = Math.max(zoomT, 0.08);
+      }
+    }
+    if (this.x < 26 || this.x > W - 26 || this.life > 3) {
+      this.dead = true;
+      if (this.x < 26 || this.x > W - 26) burst(this.x, this.y, 8, this.owner.color, 220, 3);
+    }
   }
 }
 
@@ -452,19 +1345,22 @@ class Match {
     this.p2 = new Fighter(850, -1, '#45c8ff', mode === 'ai' ? '电脑' : '玩家2');
     this.ai = mode === 'ai' ? new AI(this.p2, this.p1) : null;
     this.events = [];
+    this.projectiles = [];
     this.phase = 'count'; this.phT = 1.5; this.timer = 60; this.round = 1;
     this.banner = '第 1 回合'; this.lastTick = 99;
   }
   resetRound() {
     this.p1.resetRound(430, 1); this.p2.resetRound(850, -1);
+    this.projectiles.length = 0;
     this.timer = 60; this.phase = 'count'; this.phT = 1.5;
     this.banner = '第 ' + this.round + ' 回合';
   }
   update(dt) {
     const { p1, p2 } = this;
+    if (this.fightT > 0) { this.fightT -= dt; if (this.fightT <= 0 && this.banner === 'FIGHT!') this.banner = ''; }
     if (this.phase === 'count') {
       this.phT -= dt;
-      if (this.phT <= 0) { this.phase = 'fight'; this.banner = ''; }
+      if (this.phT <= 0) { this.phase = 'fight'; this.banner = 'FIGHT!'; this.fightT = 0.8; }
       this.step(dt, ZERO_IN, ZERO_IN, false);
       return;
     }
@@ -475,13 +1371,15 @@ class Match {
         const w = p1.wins >= 2 ? p1 : (p2.wins >= 2 ? p2 : null);
         if (w) {
           this.phase = 'matchend';
-          this.banner = w.name + ' 获得胜利！';
+          this.banner = this.mode === 'ai' ? (w === this.p1 ? '你赢了！' : '你输了…')
+                                           : (w.name + ' 获胜！');
+          slowMo = 0.8;
           sfx.win();
         } else { this.round++; this.resetRound(); }
       }
       return;
     }
-    if (this.phase === 'matchend') { this.step(dt, ZERO_IN, ZERO_IN, true); return; }
+    if (this.phase === 'matchend') { return; }   // 结算定格：全场静止
     // fight
     const in1 = readKeys(P1MAP);
     const in2 = this.mode === 'ai' ? this.ai.input(dt)
@@ -506,6 +1404,8 @@ class Match {
     this.p1.ev = this.events; this.p2.ev = this.events;
     this.p1.update(dt, this.p2, in1);
     this.p2.update(dt, this.p1, in2);
+    for (const pr of this.projectiles) pr.update(dt, pr.owner === this.p1 ? this.p2 : this.p1);
+    this.projectiles = this.projectiles.filter(p => !p.dead);
   }
   endRound(winner, why) {
     this.phase = 'roundend'; this.phT = 2.2;
@@ -513,7 +1413,7 @@ class Match {
     loser.hp = Math.min(loser.hp, 0);
     loser.state = 'ko'; loser.st = 0; loser.atk = null;
     loser.vy = -380; loser.vx = -loser.facing * 280;
-    winner.state = 'win'; winner.st = 0; winner.atk = null; winner.vy = 0;
+    if (winner.state !== 'ult') { winner.state = 'win'; winner.st = 0; winner.atk = null; winner.vy = 0; }   // 大招播放中不打断，放完自行转 win
     this.banner = why || 'K.O.！';
     slowMo = 0.9; freezeT = Math.max(freezeT, 0.12);
     sfx.ko(); burst(loser.x, loser.y - 100, 26, '#ff5555', 500, 4);
@@ -638,6 +1538,7 @@ function hostNetTick(dt) {
     NET.sendT = 1 / 30;
     NET.conn.send({ s: {
       a: snapFighter(match.p1), b: snapFighter(match.p2),
+      pr: match.projectiles.map(p => ({ x:Math.round(p.x), y:Math.round(p.y), o:p.owner === match.p1 ? 1 : 2, b:p.big ? 1 : 0 })),
       m: { ph:match.phase, tm:Math.round(match.timer*10)/10, ban:match.banner,
            r:match.round, ev:match.events.splice(0, match.events.length) }
     }});
@@ -669,13 +1570,19 @@ function guestFx(ev) {
     if (e.t === 'hit') {
       burst(e.x, e.y, e.blk ? 6 : (e.b ? 18 : 9), e.blk ? '#9fd0ff' : '#ffd257', e.b ? 420 : 280, e.b ? 4 : 3);
       if (!e.blk) burst(e.x, e.y, e.b ? 8 : 4, '#ff5555', 200, 3);
-      shake = Math.max(shake, e.b ? 15 : 7);
+      sparks.push({ x: e.x, y: e.y, t: 0, max: e.b ? 0.28 : 0.18, big: !!e.b });
+      if (e.b) slashMarks.push({ x: e.x, y: e.y, a: Math.random() * 3.14, t: 0, max: 0.3, big: true, col: '#b26bff' });
+      shake = Math.max(shake, e.b ? 18 : 9);
       if (e.blk) sfx.block(); else sfx.hit(e.b);
       if (e.b) flashA = Math.max(flashA, 0.2);
-    } else if (e.t === 'sp') {
-      sfx.special(); flashA = Math.max(flashA, 0.35);
     } else if (e.t === 'ko') {
       sfx.ko(); flashA = Math.max(flashA, 0.3);
+    } else if (e.t === 'fb') {
+      sfx.fb(e.b); if (e.b) flashA = Math.max(flashA, 0.3);
+    } else if (e.t === 'grab') {
+      sfx.grab(); flashA = Math.max(flashA, 0.25);
+    } else if (e.t === 'down') {
+      sfx.sweep();
     }
   }
 }
@@ -710,6 +1617,14 @@ function guestRender(now) {
   drawGuestFighter(ctx, s1, '#ff5555', '玩家1', s2.x);
   drawGuestFighter(ctx, s2, '#45c8ff', '玩家2', s1.x);
   drawParticles();
+  drawSparks();
+  drawSlashes();
+  const prA = a.pr || [], prB = b.pr || [];
+  for (let i = 0; i < prB.length; i++) {
+    const q = prB[i], q0 = prA[i];
+    const px = q0 ? lerp(q0.x, q.x, clamp(al, 0, 1)) : q.x;
+    drawProj(px, q.y, q.b ? 22 : 13, q.o === 1 ? '#ff5555' : '#45c8ff', !!q.b);
+  }
   drawHUDNet(b);
   drawBanners(b.m);
   applyShakeAndFlash();
@@ -717,16 +1632,13 @@ function guestRender(now) {
 function drawHUDNet(snap) {
   if (!snap) { return; }
   drawHPBar(60, 34, 1, snap.a.hp, snap.a.hp, snap.a.mt, snap.a.w, '玩家1', '#ff5555');
-  drawHPBar(W-60-420, 34, -1, snap.b.hp, snap.b.hp, snap.b.mt, snap.b.w, '玩家2', '#45c8ff');
+  drawHPBar(W - 60, 34, -1, snap.b.hp, snap.b.hp, snap.b.mt, snap.b.w, '玩家2', '#45c8ff');
 }
 function drawBanners(m) {
   if (!m) return;
   ctx.textAlign = 'center';
   if (m.ban && m.ph !== 'matchend') {
-    ctx.font = '900 58px "Microsoft YaHei",sans-serif';
-    ctx.fillStyle = '#fff'; ctx.shadowColor = '#000'; ctx.shadowBlur = 12;
-    ctx.fillText(m.ban, W/2, 240);
-    ctx.shadowBlur = 0;
+    fancyText(m.ban, W/2, 240, 58, '#ffffff', '#b9c6dd', '#4a90ff');
   }
   if (m.ph === 'fight') {
     ctx.font = '900 40px Consolas,monospace';
@@ -735,81 +1647,445 @@ function drawBanners(m) {
   }
   if (m.ph === 'matchend') {
     ctx.fillStyle = '#0009'; ctx.fillRect(0, 0, W, H);
-    ctx.font = '900 72px "Microsoft YaHei",sans-serif';
-    ctx.fillStyle = '#ffd257'; ctx.fillText(m.ban, W/2, H/2);
+    const win = /赢/.test(m.ban);
+    fancyText(m.ban, W/2, H/2, 76, win ? '#fff3b0' : '#dfe6f2', win ? '#ff9a3d' : '#7f8ba3', win ? '#ffd257' : '#45c8ff');
     ctx.font = '26px "Microsoft YaHei",sans-serif'; ctx.fillStyle = '#c8d2e2';
     ctx.fillText('按 R 再来一局 · Esc 返回菜单', W/2, H/2 + 60);
   }
 }
 
-/* ---------------- 场景渲染 ---------------- */
+/* ---------------- 场景渲染：霓虹夜城天台 ---------------- */
 function shadow(x, y) {
   const k = clamp(1 - (GROUND - y) / 380, 0.25, 1);
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
   ctx.beginPath(); ctx.ellipse(x, GROUND + 14, 46 * k, 9 * k, 0, 0, Math.PI * 2); ctx.fill();
 }
+let bgCanvas = null;
+function buildBackground() {
+  bgCanvas = document.createElement('canvas');
+  bgCanvas.width = W; bgCanvas.height = H;
+  const c = bgCanvas.getContext('2d');
+  // 夜空：深海军蓝渐变
+  let g = c.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#04060d'); g.addColorStop(0.5, '#0a1220'); g.addColorStop(1, '#101a2c');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  // 星星（两层：亮/暗）
+  for (let i = 0; i < 110; i++) {
+    const bright = Math.random() < 0.3;
+    c.globalAlpha = bright ? 0.5 + Math.random() * 0.4 : 0.12 + Math.random() * 0.22;
+    c.fillStyle = bright ? '#e8f0ff' : '#9fb2d8';
+    const sx = Math.random() * W, sy = Math.random() * 400, r = bright ? 1.4 : 0.9;
+    c.fillRect(sx, sy, r, r);
+  }
+  c.globalAlpha = 1;
+  // 月亮：双层柔光
+  let mg = c.createRadialGradient(1015, 150, 24, 1015, 150, 230);
+  mg.addColorStop(0, 'rgba(200,215,240,0.30)'); mg.addColorStop(0.5, 'rgba(160,180,220,0.10)'); mg.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = mg; c.beginPath(); c.arc(1015, 150, 230, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#dde6f4'; c.beginPath(); c.arc(1015, 150, 54, 0, Math.PI * 2); c.fill();
+  c.fillStyle = 'rgba(150,168,200,0.35)';
+  c.beginPath(); c.arc(996, 138, 9, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.arc(1030, 168, 12, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.arc(1012, 158, 6, 0, Math.PI * 2); c.fill();
+  // 城市光污染：地平线暖光雾
+  let hz = c.createLinearGradient(0, GROUND - 340, 0, GROUND);
+  hz.addColorStop(0, 'rgba(0,0,0,0)'); hz.addColorStop(0.75, 'rgba(46,64,104,0.16)'); hz.addColorStop(1, 'rgba(72,92,138,0.30)');
+  c.fillStyle = hz; c.fillRect(0, GROUND - 340, W, 340);
+  // 远景楼群（最淡）
+  c.fillStyle = '#0e1626';
+  for (let x = -20; x < W + 40;) {
+    const w2 = 60 + Math.random() * 100, h2 = 130 + Math.random() * 200;
+    c.fillRect(x, GROUND - 16 - h2, w2, h2 + 30);
+    x += w2 + 10;
+  }
+  // 中景楼群
+  for (let x = -30; x < W + 40;) {
+    const w2 = 80 + Math.random() * 110, h2 = 80 + Math.random() * 150;
+    const top = GROUND - 16 - h2;
+    c.fillStyle = '#0a1120';
+    c.fillRect(x, top, w2, h2 + 30);
+    c.fillStyle = 'rgba(255,214,120,0.34)';
+    for (let wx = x + 9; wx < x + w2 - 12; wx += 19)
+      for (let wy = top + 12; wy < GROUND - 48; wy += 21)
+        if (Math.random() < 0.24) c.fillRect(wx, wy, 6, 9);
+    x += w2 + 16;
+  }
+  // 近景楼群（最深，窗更少更暗）
+  for (let x = -20; x < W + 40;) {
+    const w2 = 100 + Math.random() * 140, h2 = 50 + Math.random() * 110;
+    const top = GROUND - 16 - h2;
+    c.fillStyle = '#060b15';
+    c.fillRect(x, top, w2, h2 + 30);
+    c.fillStyle = 'rgba(255,200,110,0.22)';
+    for (let wx = x + 12; wx < x + w2 - 14; wx += 24)
+      for (let wy = top + 14; wy < GROUND - 52; wy += 26)
+        if (Math.random() < 0.14) c.fillRect(wx, wy, 7, 10);
+    x += w2 + 22;
+  }
+  // 天台地面底色
+  c.fillStyle = '#10151f'; c.fillRect(0, GROUND + 14, W, H - GROUND - 14);
+  // 地面雾光
+  let fg = c.createLinearGradient(0, GROUND - 26, 0, GROUND + 40);
+  fg.addColorStop(0, 'rgba(90,120,180,0)'); fg.addColorStop(0.5, 'rgba(90,120,180,0.12)'); fg.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = fg; c.fillRect(0, GROUND - 26, W, 70);
+}
 function drawArena() {
   ctx.fillStyle = '#10141a';
   ctx.fillRect(-24, -24, W + 48, H + 48);
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#131922'); g.addColorStop(0.7, '#1a222e'); g.addColorStop(1, '#141a24');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // 背景大字
-  ctx.font = '900 460px "Microsoft YaHei",serif';
-  ctx.fillStyle = 'rgba(255,255,255,0.025)';
-  ctx.textAlign = 'center'; ctx.fillText('斗', W/2, 560);
-  // 远景柱子
-  ctx.fillStyle = 'rgba(255,255,255,0.03)';
-  for (let i = 0; i < 6; i++) ctx.fillRect(90 + i * 220, 120, 46, GROUND - 120);
-  // 地面
-  ctx.strokeStyle = '#31405a'; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.moveTo(0, GROUND + 16); ctx.lineTo(W, GROUND + 16); ctx.stroke();
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
+  if (!bgCanvas) buildBackground();
+  ctx.drawImage(bgCanvas, 0, 0);
+  const now = performance.now() / 1000;
+  // 交叉探照灯（缓慢扫动）
+  ctx.save();
+  ctx.fillStyle = '#cfe0ff';
+  for (const dir of [1, -1]) {
+    ctx.save();
+    ctx.translate(dir > 0 ? 150 : W - 150, -30);
+    ctx.rotate(Math.sin(now * 0.33 + (dir > 0 ? 0 : 1.8)) * 0.15);
+    ctx.globalAlpha = 0.022 + 0.01 * Math.sin(now * 0.9 + dir);
+    ctx.beginPath();
+    ctx.moveTo(-16, 0); ctx.lineTo(16, 0);
+    ctx.lineTo(320, GROUND + 20); ctx.lineTo(-320, GROUND + 20);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+  // 夜空动态：偶发流星 + 高楼航空灯 + 月亮呼吸
+  const secs = now % 8;
+  if (secs < 0.9) {
+    const p3 = secs / 0.9;
+    const sx2 = 240 + p3 * 620, sy2 = 60 + p3 * 190;
+    ctx.save();
+    ctx.globalAlpha = (1 - p3) * 0.85;
+    ctx.strokeStyle = '#dfe8ff'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(sx2, sy2); ctx.lineTo(sx2 - 56, sy2 - 17); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.fillStyle = '#ff4d5e';
+  for (const [lx, ly, phz] of [[330, 150, 0], [880, 105, 2.1], [1180, 190, 4.2]]) {
+    if (Math.sin(now * 2.2 + phz) > 0.2) { ctx.save(); ctx.shadowColor = '#ff4d5e'; ctx.shadowBlur = 8; ctx.fillRect(lx, ly, 3.5, 3.5); ctx.restore(); }
+  }
+  const mpul = 0.9 + 0.1 * Math.sin(now * 0.7);
+  if (mpul > 0.97) { ctx.save(); ctx.globalAlpha = 0.25 * mpul; ctx.fillStyle = '#dfe6f2';
+    ctx.beginPath(); ctx.arc(1015, 155, 62, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+  // 流云：三条薄云缓慢漂过
+  ctx.save();
+  for (let ci = 0; ci < 3; ci++) {
+    const cy = 80 + ci * 46, spd = 5 + ci * 2.4, wdt = 260 + ci * 90;
+    const cx = ((now * spd + ci * 430) % (W + wdt + 300)) - wdt - 150;
+    ctx.globalAlpha = 0.05 + ci * 0.014;
+    ctx.fillStyle = '#c9d8f2';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, wdt / 2, 13 + ci * 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+  // 星闪：12 颗动态闪烁
+  ctx.save();
+  for (let i = 0; i < 12; i++) {
+    const sx2 = (i * 137 + 61) % W, sy2 = (i * 89 + 37) % 330;
+    const tw = Math.sin(now * (1.4 + (i % 5) * 0.37) + i * 2.2);
+    if (tw > 0.55) {
+      ctx.globalAlpha = (tw - 0.55) * 1.6;
+      ctx.fillStyle = '#e8f0ff';
+      ctx.fillRect(sx2, sy2, 1.6, 1.6);
+    }
+  }
+  ctx.restore();
+  // 暗角
+  const vg = ctx.createRadialGradient(W/2, H/2, H * 0.42, W/2, H/2, H * 0.95);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.42)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  // 观众席剪影（轻微起伏）
+  ctx.fillStyle = '#0a0e18';
+  ctx.beginPath();
+  for (let x = 26; x < W - 20; x += 32) {
+    const bob = Math.sin(now * 3 + x * 0.07) * 3;
+    ctx.moveTo(x + 17, GROUND + 6);
+    ctx.arc(x + 8, GROUND + 4 + bob, 9, 0, Math.PI * 2);
+  }
+  ctx.fill();
+  // 天台地面
+  ctx.fillStyle = '#141a26';
+  ctx.fillRect(0, GROUND + 14, W, H - GROUND - 14);
+  ctx.strokeStyle = '#3a4c6e'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(0, GROUND + 14); ctx.lineTo(W, GROUND + 14); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
   for (let x = 0; x < W; x += 80) { ctx.beginPath(); ctx.moveTo(x, GROUND + 20); ctx.lineTo(x - 30, H); ctx.stroke(); }
+  // 前景护栏
+  ctx.strokeStyle = 'rgba(10,13,20,0.9)'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(0, H - 26); ctx.lineTo(W, H - 26); ctx.stroke();
+  for (let x = 10; x < W; x += 60) { ctx.beginPath(); ctx.moveTo(x, H - 26); ctx.lineTo(x, H); ctx.stroke(); }
 }
 function drawParticles() {
   for (const p of particles) {
+    if (p.flame) {
+      ctx.save();
+      ctx.globalAlpha = clamp(1 - p.life / p.max, 0, 1);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = p.col;
+      ctx.fillRect(p.x - p.sz / 2, p.y - p.sz * 1.4, p.sz, p.sz * 2.4);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(p.x - p.sz / 4, p.y - p.sz * 0.6, p.sz / 2, p.sz * 1.2);
+      ctx.restore();
+      continue;
+    }
     ctx.globalAlpha = clamp(1 - p.life / p.max, 0, 1);
     ctx.fillStyle = p.col;
-    ctx.fillRect(p.x - p.sz/2, p.y - p.sz/2, p.sz, p.sz);
+    if (p.line) ctx.fillRect(p.x - p.sz * 2.5, p.y - 1, p.sz * 5, 2);
+    else ctx.fillRect(p.x - p.sz/2, p.y - p.sz/2, p.sz, p.sz);
   }
   ctx.globalAlpha = 1;
 }
-function drawHPBar(x, y, dir, hp, hpShown, mt, wins, name, col) {
-  const bw = 420, bh = 22;
-  ctx.textAlign = dir > 0 ? 'left' : 'right';
-  ctx.font = '700 20px "Microsoft YaHei",sans-serif';
-  ctx.fillStyle = '#c8d2e2';
-  ctx.fillText(name, x, y - 8);
-  // 胜场点
-  for (let i = 0; i < 2; i++) {
-    const px = dir > 0 ? x + bw + 14 + i * 24 : x - bw - 14 - i * 24;
-    ctx.beginPath(); ctx.arc(px, y + 10, 9, 0, Math.PI * 2);
-    ctx.strokeStyle = '#556078'; ctx.lineWidth = 2; ctx.stroke();
-    if (i < wins) { ctx.fillStyle = '#ffd257'; ctx.fill(); }
+function drawProj(x, y, r, col, big) {
+  const now = performance.now() / 1000;
+  const pul = 0.88 + 0.12 * Math.sin(now * 14);
+  const R = r * (big ? 3.8 : 3.2) * pul;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  // 外层光晕（大而柔）
+  const g = ctx.createRadialGradient(x, y, r * 0.1, x, y, R);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(0.2, col);
+  g.addColorStop(0.55, col + '77');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
+  // 旋转能量环：三段弧
+  ctx.strokeStyle = col; ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const a0 = now * 5.2 + i * 2.09;
+    ctx.globalAlpha = 0.55 - i * 0.13;
+    ctx.lineWidth = 3.5 - i * 0.8;
+    ctx.beginPath(); ctx.arc(x, y, r * (1.35 + i * 0.32), a0, a0 + 1.5); ctx.stroke();
   }
-  const bx = dir > 0 ? x : x - bw;
-  ctx.fillStyle = '#0a0d13'; ctx.fillRect(bx - 2, y - 2, bw + 4, bh + 4);
-  ctx.fillStyle = '#5a2732'; ctx.fillRect(bx, y, bw, bh);
-  const wShow = bw * clamp(hpShown, 0, 100) / 100;
-  const wNow  = bw * clamp(hp, 0, 100) / 100;
+  ctx.globalAlpha = 1;
+  // 电弧：两道锯齿闪电
+  for (let i = 0; i < 2; i++) {
+    ctx.strokeStyle = i ? '#ffffff' : col;
+    ctx.lineWidth = 1.6;
+    ctx.globalAlpha = 0.5 + 0.3 * Math.sin(now * 23 + i * 3);
+    ctx.beginPath();
+    const a0 = now * 17 + i * Math.PI;
+    let px = x + Math.cos(a0) * r * 0.5, py = y + Math.sin(a0) * r * 0.5;
+    ctx.moveTo(px, py);
+    for (let seg = 1; seg <= 3; seg++) {
+      const aa = a0 + seg * 0.55, rr = r * (0.5 + seg * (0.55 + 0.25 * Math.sin(now * 31 + seg)));
+      px = x + Math.cos(aa) * rr; py = y + Math.sin(aa) * rr;
+      ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  // 白热核心
+  ctx.shadowColor = col; ctx.shadowBlur = big ? 40 : 28;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(x, y, r * 0.52, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+function drawSlashes() {
+  for (const s of slashMarks) {
+    const p = s.t / s.max;
+    ctx.save();
+    ctx.translate(s.x, s.y); ctx.rotate(s.a);
+    ctx.globalAlpha = clamp(1 - p, 0, 1);
+    ctx.lineCap = 'round';
+    const r = (s.big ? 70 : 40) * (0.55 + 0.9 * p);
+    ctx.strokeStyle = s.col || '#b26bff';
+    ctx.lineWidth = 7 * (1 - p) + 2;
+    ctx.beginPath(); ctx.arc(0, 0, r, -0.6, 0.6); ctx.stroke();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3 * (1 - p) + 1;
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.8, -0.42, 0.42); ctx.stroke();
+    ctx.restore();
+  }
+}
+/* 帅字体：斜切+描边+渐变+辉光 */
+function fancyText(txt, x, y, size, c1, c2, glow) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.transform(1, 0, -0.14, 1, 0, 0);
+  ctx.font = '900 ' + size + 'px "Microsoft YaHei","SimHei",sans-serif';
+  ctx.textAlign = 'center';
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = glow; ctx.shadowBlur = size / 3;
+  ctx.lineWidth = Math.max(4, size / 7);
+  ctx.strokeStyle = 'rgba(8,10,16,0.9)';
+  ctx.strokeText(txt, 0, 0);
+  ctx.shadowBlur = 0;
+  const g = ctx.createLinearGradient(0, -size * 0.85, 0, size * 0.18);
+  g.addColorStop(0, c1); g.addColorStop(1, c2);
+  ctx.fillStyle = g;
+  ctx.fillText(txt, 0, 0);
+  ctx.restore();
+}
+function drawSparks() {
+  for (const s of sparks) {
+    const p = s.t / s.max, r = (s.big ? 16 : 9) + (s.big ? 66 : 40) * p;
+    ctx.save();
+    ctx.globalAlpha = 1 - p;
+    ctx.strokeStyle = s.big ? '#ffd257' : '#fff';
+    ctx.lineWidth = (s.big ? 6 : 4) * (1 - p) + 1.5;
+    ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = '#fff';
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a2 = i * Math.PI / 3 + s.t * 4, r2 = r * (0.75 + 0.35 * Math.sin(i * 5 + s.t * 22));
+      ctx.moveTo(s.x + Math.cos(a2) * r * 0.5, s.y + Math.sin(a2) * r * 0.5);
+      ctx.lineTo(s.x + Math.cos(a2) * r2, s.y + Math.sin(a2) * r2);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+/* 圆角矩形路径 */
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function drawHPBar(x, y, dir, hp, hpShown, mt, wins, name, col) {
+  const bw = 420, bh = 24;
+  const now = performance.now() / 1000;
+  ctx.textAlign = dir > 0 ? 'left' : 'right';
+  // ===== 名称牌：菱形徽记 + 名字 + accent 下划线 =====
+  const nx = dir > 0 ? x + 30 : x + bw - 30;
+  ctx.save();
+  ctx.translate(nx, y - 14);
+  ctx.rotate(Math.PI / 4);
+  ctx.fillStyle = col;
+  ctx.shadowColor = col; ctx.shadowBlur = 9;
+  ctx.fillRect(-6, -6, 12, 12);
+  ctx.restore();
+  ctx.font = '800 19px "Microsoft YaHei",sans-serif';
   ctx.fillStyle = '#e8ecf2';
-  ctx.fillRect(dir > 0 ? bx : bx + bw - wShow, y, wShow, bh);
+  ctx.fillText(name, dir > 0 ? x + 48 : x + bw - 48, y - 8);
+  ctx.fillStyle = col;
+  ctx.fillRect(dir > 0 ? x + 46 : x + bw - 46 - 56, y - 3, 56, 2.5);
+  // ===== 胜场：金色菱形 pip =====
+  for (let i = 0; i < 2; i++) {
+    const px = dir > 0 ? x + bw + 22 + i * 26 : x - bw - 22 - i * 26;
+    ctx.save();
+    ctx.translate(px, y + bh / 2 + 1);
+    ctx.rotate(Math.PI / 4);
+    if (i < wins) {
+      ctx.fillStyle = '#ffd257'; ctx.shadowColor = '#ffd257'; ctx.shadowBlur = 12;
+      ctx.fillRect(-7, -7, 14, 14);
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#fff3b0'; ctx.lineWidth = 2; ctx.strokeRect(-4, -4, 8, 8);
+    } else {
+      ctx.strokeStyle = '#46536e'; ctx.lineWidth = 2.5;
+      ctx.strokeRect(-6.5, -6.5, 13, 13);
+    }
+    ctx.restore();
+  }
+  // ===== 血条外框：斜切金属框 =====
+  const bx = dir > 0 ? x : x - bw;
+  const skew = 7;
+  const frame = (pad) => {
+    ctx.beginPath();
+    if (dir > 0) {
+      ctx.moveTo(bx - pad + skew, y - pad); ctx.lineTo(bx + bw + pad, y - pad);
+      ctx.lineTo(bx + bw + pad, y + bh + pad); ctx.lineTo(bx - pad, y + bh + pad);
+    } else {
+      ctx.moveTo(bx - pad, y - pad); ctx.lineTo(bx + bw + pad - skew, y - pad);
+      ctx.lineTo(bx + bw + pad, y + bh + pad); ctx.lineTo(bx - pad, y + bh + pad);
+    }
+    ctx.closePath();
+  };
+  frame(3); ctx.fillStyle = '#2c3852'; ctx.fill();
+  frame(1.5); ctx.fillStyle = '#0a0d13'; ctx.fill();
+  // 低血 < 25%：框呼吸红光
+  if (hp < MAXHP * 0.25) {
+    ctx.save();
+    ctx.globalAlpha = 0.35 + 0.3 * Math.sin(now * 7);
+    frame(4.5); ctx.strokeStyle = '#ff3b2e'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.restore();
+  }
+  // ===== 血量层：底红 → 黄拖尾 → 主渐变 =====
+  const wShow = bw * clamp(hpShown, 0, MAXHP) / MAXHP;
+  const wNow  = bw * clamp(hp, 0, MAXHP) / MAXHP;
+  const inX = dir > 0 ? bx : bx + bw;
+  const wRect = (w, inset) => {           // 血量平行四边形：随外框斜切
+    ctx.beginPath();
+    if (dir > 0) {
+      ctx.moveTo(inX + skew - inset, y + inset);
+      ctx.lineTo(inX + w - inset, y + inset);
+      ctx.lineTo(inX + w - inset - skew, y + bh - inset);
+      ctx.lineTo(inX + inset, y + bh - inset);
+    } else {
+      ctx.moveTo(inX - w + inset + skew, y + inset);
+      ctx.lineTo(inX - inset, y + inset);
+      ctx.lineTo(inX - inset - skew, y + bh - inset);
+      ctx.lineTo(inX - w + inset, y + bh - inset);
+    }
+    ctx.closePath();
+  };
+  wRect(wShow, 0); ctx.fillStyle = '#6e2733'; ctx.fill();
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  wRect(wShow, 0); ctx.fillStyle = 'rgba(255,210,120,0.4)'; ctx.fill();
+  ctx.restore();
   const gr = ctx.createLinearGradient(bx, y, bx + bw, y);
-  gr.addColorStop(0, col); gr.addColorStop(1, dir > 0 ? '#ff8866' : '#8ae2ff');
-  ctx.fillStyle = gr;
-  ctx.fillRect(dir > 0 ? bx : bx + bw - wNow, y, wNow, bh);
-  // 气槽
-  const my = y + bh + 6, mh = 10;
-  ctx.fillStyle = '#0a0d13'; ctx.fillRect(bx, my - 1, bw + 2, mh + 2);
+  const lowHp = hp < MAXHP * 0.25;
+  if (lowHp) { gr.addColorStop(0, '#ff8877'); gr.addColorStop(1, '#ffd0c0'); }
+  else { gr.addColorStop(0, col); gr.addColorStop(1, dir > 0 ? '#ff8866' : '#8ae2ff'); }
+  wRect(wNow, 0); ctx.fillStyle = gr; ctx.fill();
+  // 顶部高光
+  ctx.save(); ctx.globalAlpha = 0.22; ctx.fillStyle = '#fff';
+  wRect(wNow, 1); ctx.fillRect(dir > 0 ? inX + 2 : inX - wNow + 2, y + 2, wNow - 5, 4);
+  ctx.restore();
+  // 流动光带（扫过血条）
+  if (wNow > 24) {
+    const sweep = ((now * 0.55) % 1) * (wNow + 60) - 30;
+    const sxp = dir > 0 ? inX + sweep : inX - sweep;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.3;
+    const sg = ctx.createLinearGradient(sxp - 24, 0, sxp + 24, 0);
+    sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(0.5, 'rgba(255,255,255,0.75)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sg;
+    ctx.fillRect(sxp - 24, y + 1, 48, bh - 2);
+    ctx.restore();
+  }
+  // ===== 气槽：斜纹能量条 =====
+  const my = y + bh + 7, mh = 11;
+  const mbx = dir > 0 ? bx : bx + skew;
+  rr(mbx, my, bw - skew, mh, 3); ctx.fillStyle = '#0a0d13'; ctx.fill();
   const full = mt >= 100;
-  ctx.fillStyle = full ? '#ffd257' : '#7a6a2a';
-  const mw = bw * clamp(mt, 0, 100) / 100;
-  ctx.fillRect(dir > 0 ? bx : bx + bw - mw, my, mw, mh);
+  const mw = (bw - skew - 2) * clamp(mt, 0, 100) / 100;
+  const mfill = dir > 0 ? mbx + 1 : mbx + bw - skew - 1 - mw;
+  const mg = ctx.createLinearGradient(mbx, my, mbx + bw, my);
+  if (full) { mg.addColorStop(0, '#ffe9a3'); mg.addColorStop(0.5, '#ffd257'); mg.addColorStop(1, '#ffb830'); }
+  else { mg.addColorStop(0, '#8fd0ff'); mg.addColorStop(0.5, '#4a9fe0'); mg.addColorStop(1, '#2a6ab0'); }
+  ctx.save();
+  rr(mfill, my + 1, Math.max(mw, 0), mh - 2, 2); ctx.fillStyle = mg; ctx.fill();
+  ctx.clip();
+  // 斜纹
+  ctx.globalAlpha = 0.16; ctx.fillStyle = '#0a1428';
+  for (let sx0 = mbx - mh; sx0 < mbx + bw; sx0 += 9) {
+    ctx.beginPath();
+    ctx.moveTo(sx0, my + mh); ctx.lineTo(sx0 + mh, my); ctx.lineTo(sx0 + mh + 4, my); ctx.lineTo(sx0 + 4, my + mh);
+    ctx.closePath(); ctx.fill();
+  }
+  // 满槽流光
   if (full) {
-    ctx.font = '700 14px "Microsoft YaHei",sans-serif';
-    ctx.fillStyle = '#ffd257';
-    ctx.fillText('必杀 READY', dir > 0 ? bx : bx + bw, my + mh + 16);
+    const sweep2 = ((now * 1.1) % 1) * (bw + 80) - 40;
+    ctx.globalAlpha = 0.5;
+    const sg2 = ctx.createLinearGradient(mbx + sweep2 - 30, 0, mbx + sweep2 + 30, 0);
+    sg2.addColorStop(0, 'rgba(255,255,255,0)'); sg2.addColorStop(0.5, '#fff'); sg2.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sg2; ctx.fillRect(mbx + sweep2 - 30, my, 60, mh);
+  }
+  ctx.restore();
+  // 分段刻度
+  ctx.fillStyle = 'rgba(6,9,14,0.6)';
+  for (let q = 1; q < 4; q++) ctx.fillRect(mbx + ((bw - skew) * q / 4) - 1, my, 2, mh);
+  if (full) {
+    const pul = 0.75 + 0.25 * Math.sin(now * 8);
+    ctx.save(); ctx.globalAlpha = pul;
+    fancyText('MAX', dir > 0 ? mbx + 34 : mbx + bw - 34, my + mh + 24, 24, '#fff3b0', '#ff9a3d', '#ffd257');
+    ctx.restore();
   }
 }
 function render() {
@@ -817,48 +2093,106 @@ function render() {
   if (!match) return;
   const { p1, p2 } = match;
   shadow(p1.x, p1.y); shadow(p2.x, p2.y);
+  // 升龙光柱：上升期间金色冲天光束（lighter 叠加）
+  for (const f of [p1, p2]) {
+    if (f.state === 'dp' && f.st < 0.42) {
+      const a = Math.pow(1 - f.st / 0.42, 1.4);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const bx2 = f.x;
+      const g1 = ctx.createLinearGradient(0, f.y - 330, 0, f.y);
+      g1.addColorStop(0, 'rgba(255,220,120,0)');
+      g1.addColorStop(0.55, 'rgba(255,210,90,' + (0.34 * a).toFixed(3) + ')');
+      g1.addColorStop(1, 'rgba(255,240,190,' + (0.5 * a).toFixed(3) + ')');
+      ctx.fillStyle = g1;
+      ctx.beginPath();
+      ctx.moveTo(bx2 - 40 * a - 6, f.y); ctx.lineTo(bx2 - 12, f.y - 330);
+      ctx.lineTo(bx2 + 12, f.y - 330); ctx.lineTo(bx2 + 40 * a + 6, f.y);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,250,225,' + (0.42 * a).toFixed(3) + ')';
+      ctx.fillRect(bx2 - 5, f.y - 330, 10, 330);
+      ctx.restore();
+    }
+  }
   // 必杀残影
   for (const f of [p1, p2]) {
-    if (f.state === 'special') {
-      f.trail.push({ x:f.x, y:f.y, facing:f.facing, st:f.st });
+    if (f.state === 'ult' || f.state === 'dodge' || f.state === 'dp') {
+      f.trail.push({ x:f.x, y:f.y, facing:f.facing, st:f.st, state:f.state });
       if (f.trail.length > 9) f.trail.shift();
       for (let i = 0; i < f.trail.length; i++) {
         const g = f.trail[i];
-        const gf = { x:g.x, y:g.y, facing:g.facing, state:'special', st:g.st,
+        const gf = { x:g.x, y:g.y, facing:g.facing, state:g.state, st:g.st,
                      blockFlash:0, trail:null, color:f.color };
         Object.setPrototypeOf(gf, Fighter.prototype);
-        gf.draw(ctx, 0.05 + 0.1 * i / f.trail.length);
+        gf.draw(ctx, 0.12 + 0.2 * i / f.trail.length);
       }
     } else if (f.trail.length) f.trail.shift();
   }
   p2.draw(ctx);
   p1.draw(ctx);
   drawParticles();
+  drawSparks();
+  drawSlashes();
+  for (const pr of match.projectiles) drawProj(pr.x, pr.y, pr.big ? 26 : 16, pr.owner.color, pr.big);
+  // 连段计数器：命中≥2 时弹出
+  for (const [f, cx] of [[p1, 330], [p2, W - 330]]) {
+    if (f.comboHits > 1 && f.comboTimer > 0 && f.hp > 0) {
+      const pop = clamp(1 - f.comboTimer / 0.6, 0, 1);
+      const sc = 1 + 0.5 * Math.max(0, 1 - pop * 3);
+      ctx.save();
+      ctx.translate(cx, 150); ctx.scale(sc, sc);
+      ctx.globalAlpha = clamp(f.comboTimer / 0.25, 0, 1);
+      fancyText(f.comboHits + ' HIT', 0, 0, 44, '#fff3b0', '#ff9a3d', '#ff7740');
+      ctx.restore();
+    }
+  }
   // HUD
   drawHPBar(60, 34, 1, p1.hp, p1.hpShown, p1.meter, p1.wins, p1.name, '#ff5555');
-  drawHPBar(W-60-420, 34, -1, p2.hp, p2.hpShown, p2.meter, p2.wins, p2.name, '#45c8ff');
+  drawHPBar(W - 60, 34, -1, p2.hp, p2.hpShown, p2.meter, p2.wins, p2.name, '#45c8ff');
   ctx.textAlign = 'center';
   if (match.phase === 'fight') {
-    ctx.font = '900 40px Consolas,monospace';
-    ctx.fillStyle = '#e8ecf2';
-    ctx.fillText(Math.ceil(match.timer), W/2, 74);
+    const tsec = Math.ceil(match.timer);
+    const low = tsec <= 10;
+    const tpul = low ? 1 + 0.06 * Math.sin(performance.now() / 90) : 1;
+    ctx.save();
+    // 六角底牌
+    ctx.beginPath();
+    ctx.moveTo(-44, -40); ctx.lineTo(44, -40); ctx.lineTo(58, -26); ctx.lineTo(58, 14);
+    ctx.lineTo(44, 28); ctx.lineTo(-44, 28); ctx.lineTo(-58, 14); ctx.lineTo(-58, -26);
+    ctx.closePath();
+    ctx.translate(W/2, 62);
+    ctx.fillStyle = 'rgba(8,12,20,0.72)'; ctx.fill();
+    ctx.strokeStyle = low ? 'rgba(255,80,60,0.8)' : 'rgba(90,130,220,0.5)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.scale(tpul, tpul);
+    fancyText(String(tsec), 0, 14, 46, low ? '#ffb0a0' : '#f2f6ff', low ? '#ff5540' : '#7d8aa8', low ? '#ff5540' : '#4a90ff');
+    ctx.restore();
   }
   if (match.banner && match.phase !== 'matchend') {
-    ctx.font = '900 58px "Microsoft YaHei",sans-serif';
-    ctx.fillStyle = '#fff'; ctx.shadowColor = '#000'; ctx.shadowBlur = 14;
-    ctx.fillText(match.banner, W/2, 240);
-    ctx.shadowBlur = 0;
+    const isKO = /K.O.|FIGHT|平局/.test(match.banner);
+    const isFIGHT = match.banner === 'FIGHT!';
+    ctx.save();
+    if (isFIGHT) { const p2 = 1 + Math.max(0, (match.fightT || 0) - 0.6) * 2; ctx.translate(W/2, 240); ctx.scale(p2, p2); ctx.translate(-W/2, -240); }
+    fancyText(match.banner, W/2, 240, isFIGHT ? 84 : 58,
+      isKO ? '#ffd9d0' : '#ffffff', isKO ? '#ff3b2e' : '#b9c6dd', isKO ? '#ff3b2e' : '#4a90ff');
+    ctx.restore();
   }
   if (NET.rtt != null && NET.mode) {
     ctx.font = '15px Consolas,monospace'; ctx.textAlign = 'left';
     ctx.fillStyle = '#556078';
     ctx.fillText('延迟 ' + NET.rtt + 'ms', 16, H - 16);
   }
+  // 残血警示：任一方 < 25% 边缘红脉冲
+  if (match.phase === 'fight' && (p1.hp < MAXHP * 0.25 || p2.hp < MAXHP * 0.25)) {
+    const dg = ctx.createRadialGradient(W/2, H/2, H * 0.34, W/2, H/2, H * 0.78);
+    dg.addColorStop(0, 'rgba(255,40,20,0)');
+    dg.addColorStop(1, 'rgba(255,40,20,' + (0.14 + 0.1 * Math.sin(performance.now() / 160)).toFixed(3) + ')');
+    ctx.fillStyle = dg; ctx.fillRect(0, 0, W, H);
+  }
   if (match.phase === 'matchend') {
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, W, H);
     ctx.textAlign = 'center';
-    ctx.font = '900 76px "Microsoft YaHei",sans-serif';
-    ctx.fillStyle = '#ffd257'; ctx.fillText(match.banner, W/2, H/2);
+    const win = /赢/.test(match.banner);
+    fancyText(match.banner, W/2, H/2, 78, win ? '#fff3b0' : '#dfe6f2', win ? '#ff9a3d' : '#7f8ba3', win ? '#ffd257' : '#45c8ff');
     ctx.font = '26px "Microsoft YaHei",sans-serif'; ctx.fillStyle = '#c8d2e2';
     ctx.fillText('按 R 再来一局 · Esc 返回菜单', W/2, H/2 + 64);
   }
@@ -883,6 +2217,8 @@ function frame(now) {
   _shx = (Math.random() - 0.5) * shake; _shy = (Math.random() - 0.5) * shake;
   ctx.translate(_shx, _shy);
   shake *= Math.pow(0.0005, dt);
+  zoomT = Math.max(0, zoomT - dt);
+  if (zoomT > 0) { const zk = 1 + 0.028 * (zoomT / 0.1); ctx.translate(W / 2, H / 2); ctx.scale(zk, zk); ctx.translate(-W / 2, -H / 2); }
 
   // 粒子推进（观感层，联机两端各自跑）
   for (const p of particles) {
@@ -890,6 +2226,10 @@ function frame(now) {
     if (p.y > GROUND + 10) { p.y = GROUND + 10; p.vy *= -0.4; }
   }
   particles = particles.filter(p => p.life < p.max);
+  for (const s of sparks) s.t += dt;
+  sparks = sparks.filter(s => s.t < s.max);
+  for (const s of slashMarks) s.t += dt;
+  slashMarks = slashMarks.filter(s => s.t < s.max);
   flashA = Math.max(0, flashA - dt * 2.2);
 
   if (NET.mode === 'guest') {
@@ -918,6 +2258,9 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 /* ---------------- 菜单按钮 ---------------- */
+const mlEl = document.getElementById('movelist');
+document.getElementById('b-moves').onclick = () => { mlEl.classList.add('open'); };
+document.getElementById('ml-ok').onclick = () => mlEl.classList.remove('open');
 document.getElementById('b-ai').onclick   = () => { audio(); toMenu(); startMatch('ai'); };
 document.getElementById('b-2p').onclick   = () => { audio(); toMenu(); startMatch('2p'); };
 document.getElementById('b-host').onclick = () => { audio(); hostRoom(); };
