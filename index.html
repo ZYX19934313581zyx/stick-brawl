@@ -227,23 +227,26 @@ const sfx = {
 
 /* ---------------- 键盘 ---------------- */
 const keys = {};
-window.addEventListener('keydown', e => {
-  const k = e.key.toLowerCase();
-  // 对局中拦截全部游戏按键（无修饰键、非 F 功能键），阻止冒泡触发宿主/浏览器快捷键（W/S 冲突问题）
-  if (state === 'fight' && !e.ctrlKey && !e.metaKey && !e.altKey && !/^fd/.test(k)) {
-    e.preventDefault(); e.stopPropagation();
-  } else if (k.startsWith('arrow') || k === ' ') e.preventDefault();
-  keys[k] = true;
-  keys[e.code.toLowerCase()] = true;   // 小键盘走 e.code，NumLock 开关都有效
-  audio();
-  if (k === 'escape') { if (mlEl.classList.contains('open')) { mlEl.classList.remove('open'); return; } toMenu(); }
-  if (k === 'r' && match && match.phase === 'matchend') startMatch(lastMode);
-});
-window.addEventListener('keyup', e => {
-  if (state === 'fight') { e.preventDefault(); e.stopPropagation(); }
-  keys[e.key.toLowerCase()] = false; keys[e.code.toLowerCase()] = false;
-});
+// 按键系统：window+document 双目标、捕获阶段、三事件类型全拦截
+// 对局中 stopImmediatePropagation 截断同事件一切后续监听（含宿主注入脚本），防止触发宿主快捷键
+const eatKeys = e => {
 
+  const k = (e.key || '').toLowerCase();
+  const cd = (e.code || '').toLowerCase();
+  if (e.type !== 'keypress') { keys[k] = e.type === 'keydown'; keys[cd] = e.type === 'keydown'; }
+  const inFight = state === 'fight';
+  if (inFight && !e.ctrlKey && !e.metaKey && !e.altKey && !/^fd/.test(k)) {
+    e.preventDefault(); e.stopImmediatePropagation();
+  } else if (k.startsWith('arrow') || k === ' ') e.preventDefault();
+  if (e.type === 'keydown') {
+    audio();
+    if (k === 'escape') { if (mlEl.classList.contains('open')) { mlEl.classList.remove('open'); return; } toMenu(); }
+    if (k === 'r' && match && match.phase === 'matchend') startMatch(lastMode);
+  }
+};
+for (const tgt of [window, document]) {
+  for (const ev of ['keydown', 'keyup', 'keypress']) tgt.addEventListener(ev, eatKeys, true);
+}
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 const P1MAP = { left:'a', right:'d', up:'w', down:'s', lp:'j', lk:'k', hp:'u', hk:'i', dg:'l', sp:'o' };
 const P2MAP = { left:'arrowleft', right:'arrowright', up:'arrowup', down:'arrowdown',
