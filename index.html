@@ -1351,8 +1351,8 @@ class Projectile {
 class Match {
   constructor(mode) {          // mode: 'ai' | '2p' | 'host'
     this.mode = mode;
-    this.p1 = new Fighter(430, 1, '#ff5555', '玩家1');
-    this.p2 = new Fighter(850, -1, '#45c8ff', mode === 'ai' ? '电脑' : '玩家2');
+    this.p1 = new Fighter(430, 1, '#ff5555', mode === 'host' ? '你' : '玩家1');
+    this.p2 = new Fighter(850, -1, '#45c8ff', mode === 'ai' ? '电脑' : (mode === 'host' ? '对手' : '玩家2'));
     this.ai = mode === 'ai' ? new AI(this.p2, this.p1) : null;
     this.events = [];
     this.projectiles = [];
@@ -1559,7 +1559,7 @@ function guestNetTick(now, dt) {
   NET.sendT -= dt;
   if (NET.sendT <= 0) {
     NET.sendT = 1 / 30;
-    NET.conn.send({ in: readKeys(P2MAP), rtt: NET.rtt });
+    NET.conn.send({ in: readKeys(P1MAP), rtt: NET.rtt });   // 远程联机双方都用 P1 键位
   }
   NET.pingT -= dt;
   if (NET.pingT <= 0) { NET.pingT = 1; NET.conn.send({ ping: performance.now() }); }
@@ -1641,8 +1641,8 @@ function guestRender(now) {
 }
 function drawHUDNet(snap) {
   if (!snap) { return; }
-  drawHPBar(60, 34, 1, snap.a.hp, snap.a.hp, snap.a.mt, snap.a.w, '玩家1', '#ff5555');
-  drawHPBar(W - 60, 34, -1, snap.b.hp, snap.b.hp, snap.b.mt, snap.b.w, '玩家2', '#45c8ff');
+  drawHPBar(60, 34, 1, snap.a.hp, snap.a.hp, snap.a.mt, snap.a.w, '对手', '#ff5555');
+  drawHPBar(W - 60, 34, -1, snap.b.hp, snap.b.hp, snap.b.mt, snap.b.w, '你', '#45c8ff');
 }
 function drawBanners(m) {
   if (!m) return;
