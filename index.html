@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>火柴大乱斗 · Stick Brawl</title>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
   html,body{margin:0;padding:0;height:100%;overflow:hidden;
     font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;user-select:none;
@@ -72,6 +71,27 @@
   #ml-ok:hover{background:linear-gradient(180deg,#4a3c26,#2e2416);box-shadow:0 0 20px rgba(255,213,87,0.25)}
   .btns button.ghost{border-left-color:#45c8ff;color:#9fc6e8}
   .btns button.ghost:hover{border-color:#45c8ff;border-left-color:#8ae2ff;box-shadow:0 0 18px rgba(69,200,255,0.22)}
+  #netpanel{position:absolute;inset:0;z-index:22;display:none;align-items:center;justify-content:center;
+    background:rgba(5,8,14,0.8);backdrop-filter:blur(6px)}
+  #netpanel.open{display:flex}
+  .np-tip{color:#8fa3c8;font-size:13px;line-height:1.8;margin:2px 0 10px}
+  .np-h{color:#ffd257;font-size:16px;letter-spacing:3px;margin:14px 0 8px}
+  .np-row{display:flex;align-items:center;gap:12px;margin:6px 0}
+  .np-label{font-size:13px;color:#79839a}
+  .np-btn{font-size:15px;padding:8px 18px;cursor:pointer;border-radius:8px;letter-spacing:2px;
+    border:1px solid #3a4656;background:linear-gradient(180deg,#1b2432,#131a26);color:#e8ecf2;
+    font-family:inherit;transition:all .15s}
+  .np-btn:hover{border-color:#ffd257;color:#ffd257;background:linear-gradient(180deg,#262f40,#18202e)}
+  .np-st{font-size:13px;color:#45c8ff}
+  .np-ta{width:100%;box-sizing:border-box;height:74px;resize:none;margin:6px 0;border-radius:8px;
+    border:1px solid #33405a;background:#0c121d;color:#9fc6e8;font-size:12px;padding:8px 10px;
+    font-family:Consolas,monospace;word-break:break-all;outline:none}
+  .np-ta:focus{border-color:#45c8ff}
+  .np-hr{border:none;border-top:1px solid #26324a;margin:16px 0}
+  .np-close{width:100%;margin-top:16px;font-size:17px;padding:11px 0;cursor:pointer;border-radius:8px;
+    border:1px solid #3a4656;background:linear-gradient(180deg,#1b2432,#131a26);color:#c8d2e2;
+    letter-spacing:8px;font-family:inherit}
+  .np-close:hover{border-color:#45c8ff;color:#8ae2ff}
   #toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:50;
     background:#2a1520;color:#ffb3a7;border:1px solid #ff555566;padding:10px 22px;
     border-radius:10px;font-size:15px;display:none;letter-spacing:1px}
@@ -88,11 +108,7 @@
   <div class="btns">
     <button id="b-ai">单人对电脑</button>
     <button id="b-2p">本地双人</button>
-    <button id="b-host">创建联机房间</button>
-    <div class="joinrow">
-      <input id="code" maxlength="5" placeholder="房间码" autocomplete="off">
-      <button id="b-join">加入房间</button>
-    </div>
+    <button id="b-net">远 程 联 机</button>
     <button id="b-moves" class="ghost">招 式 表</button>
   </div>
   <button id="ml-close" style="display:none">✕</button>
@@ -137,6 +153,24 @@
       </div>
     </div>
     <button id="ml-ok">明 白 了</button>
+  </div>
+</div>
+<div id="netpanel">
+  <div class="ml-card">
+    <h2>远程联机 <span class="ml-en">P2P · 免注册</span></h2>
+    <p class="np-tip">双方各打开一次本页面，按下面的步骤复制粘贴两串代码即可直连对战（无需服务器/房间号）</p>
+    <h3 class="np-h">房主（你建房）</h3>
+    <div class="np-row"><button id="np-host" class="np-btn">① 生成连接码</button><span class="np-st" id="np-st1"></span></div>
+    <textarea id="np-offer" class="np-ta" readonly placeholder="生成后出现连接码 → 全选复制发给对方" onclick="this.select()"></textarea>
+    <div class="np-row"><span class="np-label">对方回传的回复码粘贴到这里：</span></div>
+    <textarea id="np-answer" class="np-ta" placeholder="粘贴回复码" ></textarea>
+    <div class="np-row"><button id="np-finish" class="np-btn">② 完成连接</button><span class="np-st" id="np-st2"></span></div>
+    <hr class="np-hr">
+    <h3 class="np-h">加入方（加入别人的房）</h3>
+    <textarea id="np-in-offer" class="np-ta" placeholder="把房主的连接码粘贴到这里"></textarea>
+    <div class="np-row"><button id="np-gen" class="np-btn">① 生成回复码</button><span class="np-st" id="np-st3"></span></div>
+    <textarea id="np-out" class="np-ta" readonly placeholder="把这段回复码发回给房主，等他点完成连接" onclick="this.select()"></textarea>
+    <button id="np-close" class="np-close">关 闭</button>
   </div>
 </div>
 <div id="toast"></div>
@@ -240,7 +274,11 @@ const eatKeys = e => {
   } else if (k.startsWith('arrow') || k === ' ') e.preventDefault();
   if (e.type === 'keydown') {
     audio();
-    if (k === 'escape') { if (mlEl.classList.contains('open')) { mlEl.classList.remove('open'); return; } toMenu(); }
+    if (k === 'escape') {
+    if (mlEl.classList.contains('open')) { mlEl.classList.remove('open'); return; }
+    if (npEl.classList.contains('open')) { npEl.classList.remove('open'); return; }
+    toMenu();
+  }
     if (k === 'r' && match && match.phase === 'matchend') startMatch(lastMode);
   }
 };
@@ -1444,24 +1482,29 @@ function startMatch(mode) {
   match = new Match(mode === 'guest' ? '2p' : mode);
   state = 'fight';
   document.getElementById('menu').style.display = 'none';
+  document.getElementById('netpanel').classList.remove('open');
   document.getElementById('codeDisplay').style.display = 'none';
   if (mode !== 'guest') setNetInfo('');
 }
 function toMenu() {
-  if (NET.peer) { try { NET.peer.destroy(); } catch(e){} }
-  NET.peer = null; NET.conn = null; NET.mode = null; NET.connected = false;
-  NET.remoteIn = { ...ZERO_IN }; NET.snaps = []; NET.rtt = null;
+  closeNet();
   match = null; state = 'menu';
   document.getElementById('menu').style.display = 'flex';
   setNetInfo('');
 }
 
-/* ---------------- 联机（PeerJS P2P，主机权威） ---------------- */
-const NET = { peer:null, conn:null, mode:null, code:'', connected:false,
+/* ---------------- 联机（原生 WebRTC，手动连接码，无服务器） ---------------- */
+const NET = { pc:null, dc:null, mode:null, connected:false,
               remoteIn:{ ...ZERO_IN }, snaps:[], sendT:0, pingT:0, rtt:null, pending:'host' };
+const ICE = { iceServers: [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun.miwifi.com:3478' }
+] };
 
 function setNetInfo(txt, err) {
   const el = document.getElementById('netinfo');
+  if (!el) return;
   el.textContent = txt; el.className = err ? 'err' : '';
 }
 function toast(txt) {
@@ -1469,62 +1512,64 @@ function toast(txt) {
   el.textContent = txt; el.style.display = 'block';
   clearTimeout(toast._t); toast._t = setTimeout(() => el.style.display = 'none', 3200);
 }
-function netAvailable() { return typeof Peer !== 'undefined'; }
-
-function hostRoom() {
-  if (!netAvailable()) { setNetInfo('联机组件加载失败，请检查网络后刷新', 1); return; }
-  if (NET.peer) { try { NET.peer.destroy(); } catch (e) {} }
-  NET.pending = 'host';
-  NET.code = genCode();
-  setNetInfo('正在创建房间…');
-  const peer = new Peer('sbrawl-' + NET.code);
-  NET.peer = peer;
-  peer.on('open', () => {
-    const cd = document.getElementById('codeDisplay');
-    cd.textContent = '房间码 ' + NET.code; cd.style.display = 'block';
-    setNetInfo('把房间码发给朋友，等 TA 加入…');
-  });
-  peer.on('connection', c => {
-    if (NET.connected) { try { c.close(); } catch (e) {} return; }
-    bindConn(c);
-  });
-  peer.on('error', e => {
-    if (e.type === 'unavailable-id' && NET.pending === 'host') { hostRoom(); }
-    else setNetInfo('联机错误：' + e.type, 1);
+function enc(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); }
+function dec(str) { return JSON.parse(decodeURIComponent(escape(atob(str.trim())))); }
+function iceDone(pc) {
+  return new Promise(res => {
+    if (pc.iceGatheringState === 'complete') return res();
+    const to = setTimeout(res, 3000);
+    pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') { clearTimeout(to); res(); } };
   });
 }
-function joinRoom() {
-  if (!netAvailable()) { setNetInfo('联机组件加载失败，请检查网络后刷新', 1); return; }
-  if (NET.peer) { try { NET.peer.destroy(); } catch (e) {} }
-  const code = document.getElementById('code').value.trim().toUpperCase();
-  if (code.length !== 5) { setNetInfo('房间码是 5 位', 1); return; }
-  NET.pending = 'join';
-  setNetInfo('正在连接 ' + code + ' …');
-  const peer = new Peer();
-  NET.peer = peer;
-  peer.on('open', () => {
-    const c = peer.connect('sbrawl-' + code, { reliable: true });
-    bindConn(c);
-    setTimeout(() => { if (!NET.connected) setNetInfo('连接超时：确认房间码和对方在线', 1); }, 9000);
-  });
-  peer.on('error', e => setNetInfo('联机错误：' + (e.type === 'peer-unavailable' ? '房间不存在或已关闭' : e.type), 1));
+function closeNet() {
+  try { if (NET.dc) NET.dc.close(); } catch (e) {}
+  try { if (NET.pc) NET.pc.close(); } catch (e) {}
+  NET.pc = null; NET.dc = null; NET.mode = null; NET.connected = false;
+  NET.remoteIn = { ...ZERO_IN }; NET.snaps = []; NET.rtt = null;
 }
-function bindConn(c) {
-  NET.conn = c;
-  c.on('open', () => {
+function bindDC(dc) {
+  NET.dc = dc;
+  dc.onopen = () => {
     NET.connected = true;
-    setNetInfo('对手已连接！');
     NET.mode = NET.pending === 'host' ? 'host' : 'guest';
+    setNetInfo('对手已连接！');
     startMatch(NET.mode === 'guest' ? 'guest' : 'host');
-  });
-  c.on('data', onNetData);
-  c.on('close', () => { if (state !== 'menu') { toast('对方断开了连接'); toMenu(); } });
-  c.on('error', () => {});
+  };
+  dc.onmessage = e => { try { onNetData(typeof e.data === 'string' ? JSON.parse(e.data) : e.data); } catch (err) {} };
+  dc.onclose = () => { if (state !== 'menu') { toast('对方断开了连接'); toMenu(); } };
+}
+// 房主：生成连接码（offer）
+async function netHostOffer() {
+  closeNet();
+  NET.pending = 'host';
+  const pc = new RTCPeerConnection(ICE);
+  NET.pc = pc;
+  bindDC(pc.createDataChannel('game', { ordered: true }));
+  await pc.setLocalDescription(await pc.createOffer());
+  await iceDone(pc);
+  return enc(pc.localDescription);
+}
+// 房主：粘贴对方回复码（answer）完成连接
+async function netHostAccept(replyCode) {
+  if (!NET.pc) throw new Error('请先生成连接码');
+  await NET.pc.setRemoteDescription(dec(replyCode));
+}
+// 加入方：粘贴房主连接码，生成回复码（answer）
+async function netGuestAnswer(offerCode) {
+  closeNet();
+  NET.pending = 'guest';
+  const pc = new RTCPeerConnection(ICE);
+  NET.pc = pc;
+  pc.ondatachannel = e => bindDC(e.channel);
+  await pc.setRemoteDescription(dec(offerCode));
+  await pc.setLocalDescription(await pc.createAnswer());
+  await iceDone(pc);
+  return enc(pc.localDescription);
 }
 function onNetData(d) {
   if (NET.mode === 'host') {
     if (d && d.in) NET.remoteIn = { ...ZERO_IN, ...d.in };
-    if (d && d.ping != null) NET.conn.send({ pong: d.ping });
+    if (d && d.ping != null) NET.dc.send(JSON.stringify({ pong: d.ping }));
     if (d && d.rtt != null) NET.rtt = d.rtt;
   } else if (NET.mode === 'guest') {
     if (d && d.pong != null) NET.rtt = Math.round(performance.now() - d.pong);
@@ -1542,27 +1587,27 @@ function snapFighter(f) {
            hp:Math.round(f.hp*10)/10, mt:Math.round(f.meter), w:f.wins };
 }
 function hostNetTick(dt) {
-  if (!NET.connected || !NET.conn || !match) return;
+  if (!NET.connected || !NET.dc || NET.dc.readyState !== 'open' || !match) return;
   NET.sendT -= dt;
   if (NET.sendT <= 0) {
     NET.sendT = 1 / 30;
-    NET.conn.send({ s: {
+    NET.dc.send(JSON.stringify({ s: {
       a: snapFighter(match.p1), b: snapFighter(match.p2),
       pr: match.projectiles.map(p => ({ x:Math.round(p.x), y:Math.round(p.y), o:p.owner === match.p1 ? 1 : 2, b:p.big ? 1 : 0 })),
       m: { ph:match.phase, tm:Math.round(match.timer*10)/10, ban:match.banner,
            r:match.round, ev:match.events.splice(0, match.events.length) }
-    }});
+    }}));
   }
 }
 function guestNetTick(now, dt) {
-  if (!NET.connected || !NET.conn) return;
+  if (!NET.connected || !NET.dc || NET.dc.readyState !== 'open') return;
   NET.sendT -= dt;
   if (NET.sendT <= 0) {
     NET.sendT = 1 / 30;
-    NET.conn.send({ in: readKeys(P1MAP), rtt: NET.rtt });   // 远程联机双方都用 P1 键位
+    NET.dc.send(JSON.stringify({ in: readKeys(P1MAP), rtt: NET.rtt }));
   }
   NET.pingT -= dt;
-  if (NET.pingT <= 0) { NET.pingT = 1; NET.conn.send({ ping: performance.now() }); }
+  if (NET.pingT <= 0) { NET.pingT = 1; NET.dc.send(JSON.stringify({ ping: performance.now() })); }
 }
 
 /* 联机延迟插值渲染 */
@@ -2273,17 +2318,39 @@ document.getElementById('b-moves').onclick = () => { mlEl.classList.add('open');
 document.getElementById('ml-ok').onclick = () => mlEl.classList.remove('open');
 document.getElementById('b-ai').onclick   = () => { audio(); toMenu(); startMatch('ai'); };
 document.getElementById('b-2p').onclick   = () => { audio(); toMenu(); startMatch('2p'); };
-document.getElementById('b-host').onclick = () => { audio(); hostRoom(); };
-document.getElementById('b-join').onclick = () => { audio(); joinRoom(); };
-document.getElementById('code').addEventListener('keydown', e => {
-  if (e.key === 'Enter') joinRoom();
-  e.stopPropagation();
-});
-if (!netAvailable()) {
-  document.getElementById('b-host').disabled = true;
-  document.getElementById('b-join').disabled = true;
-  setNetInfo('联机组件未加载（无网络时只能本地玩）', 1);
-}
+/* ---------- 远程联机面板 ---------- */
+const npEl = document.getElementById('netpanel');
+document.getElementById('b-net').onclick = () => { audio(); npEl.classList.add('open'); };
+document.getElementById('np-close').onclick = () => npEl.classList.remove('open');
+const npSt = (i, t, err) => { const el = document.getElementById('np-st' + i); if (el) { el.textContent = t; el.style.color = err ? '#ff7b6b' : '#45c8ff'; } };
+document.getElementById('np-host').onclick = async () => {
+  audio();
+  try {
+    npSt(1, '正在生成…');
+    const code = await netHostOffer();
+    document.getElementById('np-offer').value = code;
+    npSt(1, '已生成！全选复制上面的连接码发给对方');
+  } catch (e) { npSt(1, '生成失败：' + e.message, 1); }
+};
+document.getElementById('np-finish').onclick = async () => {
+  const v = document.getElementById('np-answer').value.trim();
+  if (!v) { npSt(2, '先粘贴对方的回复码', 1); return; }
+  try {
+    npSt(2, '正在建立连接…');
+    await netHostAccept(v);
+    npSt(2, '连接中，若 10 秒无反应让对方重发一次');
+  } catch (e) { npSt(2, '连接失败：' + e.message, 1); }
+};
+document.getElementById('np-gen').onclick = async () => {
+  const v = document.getElementById('np-in-offer').value.trim();
+  if (!v) { npSt(3, '先把房主的连接码粘贴进来', 1); return; }
+  try {
+    npSt(3, '正在生成…');
+    const code = await netGuestAnswer(v);
+    document.getElementById('np-out').value = code;
+    npSt(3, '已生成！把回复码发回给房主');
+  } catch (e) { npSt(3, '生成失败：' + e.message, 1); }
+};
 </script>
 </body>
 </html>
