@@ -1503,6 +1503,14 @@ function toMenu() {
 /* ---------------- 联机（原生 WebRTC，手动连接码，无服务器） ---------------- */
 const NET = { pc:null, dc:null, mode:null, connected:false,
               remoteIn:{ ...ZERO_IN }, snaps:[], sendT:0, pingT:0, rtt:null, pending:'host' };
+// 信令服务器配置：?sig=host 显式指定；或页面跑在信号服务器同机 8081 端口时自动推导
+const SIG = (() => {
+  const q = new URLSearchParams(location.search);
+  if (q.get('sig')) return { host: q.get('sig'), port: +(q.get('p') || 9000), path: '/' };
+  if (location.port === '8081') return { host: location.hostname, port: 9000, path: '/' };
+  return null;
+})();
+function peerAvailable() { return typeof Peer !== 'undefined' && !window.__noPeer; }
 // 把 PeerJS 连接包装成与 DataChannel 相同的接口，复用全部同步逻辑
 function bindPeerConn(conn) {
   NET.peer = conn.peerConnection || null;
