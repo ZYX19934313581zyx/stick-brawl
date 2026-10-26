@@ -163,7 +163,11 @@
 <div id="netpanel">
   <div class="ml-card">
     <h2>远程联机 <span class="ml-en">P2P · 免注册</span></h2>
-    <div id="np-onclick" style="display:none">
+    <div id="np-hint" style="display:none" class="np-tip">
+      当前页面不支持一键联机<br>
+      请打开联机版页面：<b style="color:#ffd257">http://8.137.118.60:8081/</b>
+    </div>
+    <div id="np-onclick">
       <h3 class="np-h" style="margin-top:4px">一键房间码联机</h3>
       <div class="np-row">
         <button id="np-room-host" class="np-btn">创建房间</button>
@@ -171,21 +175,8 @@
         <button id="np-room-join" class="np-btn">加入</button>
       </div>
       <div class="np-row"><span class="np-st" id="np-st0"></span></div>
-      <hr class="np-hr">
-      <h3 class="np-h">或手动连接（任何网络必通）</h3>
+      <p class="np-tip" style="margin-top:10px">创建房间后把房间码发给朋友，他打开同一个链接输码加入即可。<br>双方都用 WASD 移动 + J 轻拳 / K 轻腿 / U 重拳 / I 重腿 / L 闪避</p>
     </div>
-    <p class="np-tip">双方各打开一次本页面，按下面的步骤复制粘贴两串代码即可直连对战（无需服务器/房间号）</p>
-    <h3 class="np-h">房主（你建房）</h3>
-    <div class="np-row"><button id="np-host" class="np-btn">① 生成连接码</button><span class="np-st" id="np-st1"></span></div>
-    <textarea id="np-offer" class="np-ta" readonly placeholder="生成后出现连接码 → 全选复制发给对方" onclick="this.select()"></textarea>
-    <div class="np-row"><span class="np-label">对方回传的回复码粘贴到这里：</span></div>
-    <textarea id="np-answer" class="np-ta" placeholder="粘贴回复码" ></textarea>
-    <div class="np-row"><button id="np-finish" class="np-btn">② 完成连接</button><span class="np-st" id="np-st2"></span></div>
-    <hr class="np-hr">
-    <h3 class="np-h">加入方（加入别人的房）</h3>
-    <textarea id="np-in-offer" class="np-ta" placeholder="把房主的连接码粘贴到这里"></textarea>
-    <div class="np-row"><button id="np-gen" class="np-btn">① 生成回复码</button><span class="np-st" id="np-st3"></span></div>
-    <textarea id="np-out" class="np-ta" readonly placeholder="把这段回复码发回给房主，等他点完成连接" onclick="this.select()"></textarea>
     <button id="np-close" class="np-close">关 闭</button>
   </div>
 </div>
@@ -1512,19 +1503,6 @@ function toMenu() {
 /* ---------------- 联机（原生 WebRTC，手动连接码，无服务器） ---------------- */
 const NET = { pc:null, dc:null, mode:null, connected:false,
               remoteIn:{ ...ZERO_IN }, snaps:[], sendT:0, pingT:0, rtt:null, pending:'host' };
-const ICE = { iceServers: [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun.miwifi.com:3478' }
-] };
-// 信令服务器配置：?sig=host 显式指定；或页面跑在信号服务器同机 8081 端口时自动推导
-const SIG = (() => {
-  const q = new URLSearchParams(location.search);
-  if (q.get('sig')) return { host: q.get('sig'), port: +(q.get('p') || 9000), path: '/' };
-  if (location.port === '8081') return { host: location.hostname, port: 9000, path: '/' };
-  return null;
-})();
-function peerAvailable() { return typeof Peer !== 'undefined' && !window.__noPeer; }
 // 把 PeerJS 连接包装成与 DataChannel 相同的接口，复用全部同步逻辑
 function bindPeerConn(conn) {
   NET.peer = conn.peerConnection || null;
@@ -1592,16 +1570,8 @@ function toast(txt) {
 }
 function enc(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); }
 function dec(str) { return JSON.parse(decodeURIComponent(escape(atob(str.trim())))); }
-function iceDone(pc) {
-  return new Promise(res => {
-    if (pc.iceGatheringState === 'complete') return res();
-    const to = setTimeout(res, 3000);
-    pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') { clearTimeout(to); res(); } };
-  });
-}
 function closeNet() {
   try { if (NET.dc) NET.dc.close(); } catch (e) {}
-  try { if (NET.pc) NET.pc.close(); } catch (e) {}
   try { if (NET.peerObj) NET.peerObj.destroy(); } catch (e) {}
   NET.peerObj = null;
   NET.pc = null; NET.dc = null; NET.mode = null; NET.connected = false;
@@ -1619,33 +1589,6 @@ function bindDC(dc) {
   dc.onclose = () => { if (state !== 'menu') { toast('对方断开了连接'); toMenu(); } };
 }
 // 房主：生成连接码（offer）
-async function netHostOffer() {
-  closeNet();
-  NET.pending = 'host';
-  const pc = new RTCPeerConnection(ICE);
-  NET.pc = pc;
-  bindDC(pc.createDataChannel('game', { ordered: true }));
-  await pc.setLocalDescription(await pc.createOffer());
-  await iceDone(pc);
-  return enc(pc.localDescription);
-}
-// 房主：粘贴对方回复码（answer）完成连接
-async function netHostAccept(replyCode) {
-  if (!NET.pc) throw new Error('请先生成连接码');
-  await NET.pc.setRemoteDescription(dec(replyCode));
-}
-// 加入方：粘贴房主连接码，生成回复码（answer）
-async function netGuestAnswer(offerCode) {
-  closeNet();
-  NET.pending = 'guest';
-  const pc = new RTCPeerConnection(ICE);
-  NET.pc = pc;
-  pc.ondatachannel = e => bindDC(e.channel);
-  await pc.setRemoteDescription(dec(offerCode));
-  await pc.setLocalDescription(await pc.createAnswer());
-  await iceDone(pc);
-  return enc(pc.localDescription);
-}
 function onNetData(d) {
   if (NET.mode === 'host') {
     if (d && d.in) NET.remoteIn = { ...ZERO_IN, ...d.in };
@@ -2402,8 +2345,9 @@ document.getElementById('b-2p').onclick   = () => { audio(); toMenu(); startMatc
 const npEl = document.getElementById('netpanel');
 document.getElementById('b-net').onclick = () => {
   audio();
-  const oc = document.getElementById('np-onclick');
-  if (SIG && peerAvailable()) oc.style.display = 'block';
+  const ok = SIG && peerAvailable();
+  document.getElementById('np-onclick').style.display = ok ? 'block' : 'none';
+  document.getElementById('np-hint').style.display = ok ? 'none' : 'block';
   npEl.classList.add('open');
 };
 document.getElementById('np-room-host').onclick = () => { audio(); peerHostRoom(); };
@@ -2411,34 +2355,7 @@ document.getElementById('np-room-join').onclick = () => { audio(); peerJoinRoom(
 document.getElementById('np-code').addEventListener('keydown', e => { if (e.key === 'Enter') peerJoinRoom(); e.stopPropagation(); });
 document.getElementById('np-close').onclick = () => npEl.classList.remove('open');
 const npSt = (i, t, err) => { const el = document.getElementById('np-st' + i); if (el) { el.textContent = t; el.style.color = err ? '#ff7b6b' : '#45c8ff'; } };
-document.getElementById('np-host').onclick = async () => {
-  audio();
-  try {
-    npSt(1, '正在生成…');
-    const code = await netHostOffer();
-    document.getElementById('np-offer').value = code;
-    npSt(1, '已生成！全选复制上面的连接码发给对方');
-  } catch (e) { npSt(1, '生成失败：' + e.message, 1); }
-};
-document.getElementById('np-finish').onclick = async () => {
-  const v = document.getElementById('np-answer').value.trim();
-  if (!v) { npSt(2, '先粘贴对方的回复码', 1); return; }
-  try {
-    npSt(2, '正在建立连接…');
-    await netHostAccept(v);
-    npSt(2, '连接中，若 10 秒无反应让对方重发一次');
-  } catch (e) { npSt(2, '连接失败：' + e.message, 1); }
-};
-document.getElementById('np-gen').onclick = async () => {
-  const v = document.getElementById('np-in-offer').value.trim();
-  if (!v) { npSt(3, '先把房主的连接码粘贴进来', 1); return; }
-  try {
-    npSt(3, '正在生成…');
-    const code = await netGuestAnswer(v);
-    document.getElementById('np-out').value = code;
-    npSt(3, '已生成！把回复码发回给房主');
-  } catch (e) { npSt(3, '生成失败：' + e.message, 1); }
-};
+
 </script>
 </body>
 </html>
