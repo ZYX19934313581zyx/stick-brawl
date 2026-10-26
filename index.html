@@ -282,10 +282,12 @@ const eatKeys = e => {
   if (e.type === 'keydown') {
     audio();
     if (k === 'escape') {
-    if (mlEl.classList.contains('open')) { mlEl.classList.remove('open'); return; }
-    if (npEl.classList.contains('open')) { npEl.classList.remove('open'); return; }
-    toMenu();
-  }
+      if (mlEl.classList.contains('open')) { mlEl.classList.remove('open'); return; }
+      if (npEl.classList.contains('open')) { npEl.classList.remove('open'); return; }
+      // 对局进行中（未到结算）禁止 Esc 返回，避免战斗中误触断线
+      if (state === 'fight' && match && match.phase !== 'matchend') { toast('对局进行中无法退出，打完本局再按 Esc'); return; }
+      toMenu();
+    }
     if (k === 'r' && match && match.phase === 'matchend') startMatch(lastMode);
   }
 };
