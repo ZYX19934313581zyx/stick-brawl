@@ -23,6 +23,7 @@
 | 反无限连 | 照抄 UNI/BB 四件套(applyHit 内):①连段计时器0.6s内累计combo(不因恢复瞬间清零) ②硬直衰减 第4击起每击-22% ③浮空衰减 第3次浮空起每次-30% ④击退增长+kbV残余速度(穿透状态完整结算位移,空中阻力0.5^dt/地面0.02^dt,打飞可撞墙反弹:阈值200,反弹0.45倍+火花+震屏)+墙角反推攻击者。实测角落狂按轻拳:最长连段6,对手被推出500px+;升龙打飞实测撞墙反弹 |
 | 打击感 | 命中白/金色火花环+放射线(sparks),斩痕新月(slashMarks,超必杀/升龙/重击),命中停顿 轻击0.075s/重击0.14s,屏震 9/22,音效三层(噪声snap+正弦低频冲击+重击方波轰鸣,随机音高±25%),挥击 whoosh 音效,升龙上升金色斗气粒子 |
 | 模式 | 单人对电脑(AI 状态机,带反应延迟)/ 本地双人 / 联机建房 / 联机加入 |
+| 联机稳定性 | **TURN中继已部署**(coturn:3478 TCP/UDP, relay 50000-50100, user sbrawl/sbrawl2026, external-ip映射);客户端 ICE_CFG=miwifi+google STUN + TURN;对称NAT/VPN用户自动走中继。安全组需放行:3478 TCP、3478 UDP、50000-50100 UDP(待用户加)。信令保持独立9000端口(同端口挂载在peer1.x不响应,已回退) |
 | **线上部署** | **联机版: http://8.137.118.60:8081/**(阿里云Ubuntu22.04, Node18绿色版/opt/node18, systemd服务stick-brawl开机自启, 部署文件在服务器/root/stick-brawl/, 8081静态+9000 PeerJS信令, 安全组已放行两端口); 一键房间码实测全链路通(建房UK7CS→加入→W同步/快照/rtt)。**单机版: GitHub Pages** https://zyx19934313581zyx.github.io/stick-brawl/ (Pages仅支持手动连接码, 因https混合内容限制)。服务器更新: scp index.html root@8.137.118.60:/root/stick-brawl/ && ssh systemctl restart stick-brawl |
 | 联机方式v5 | **仅一键房间码**(手动连接码UI与代码已删除);Pages版(无信令)面板显示提示并指向联机版链接 |
 | ~~联机方式v4~~ | ~~双模式~~:①一键房间码(自建PeerJS信令服务器,deploy/目录含 server.js+systemd,8081静态页+9000信令同机部署,页面在8081端口或 ?sig=host 时自动启用) ②手动连接码(无服务器兜底,任何网络必通)。页面层自适应 SIG 常量;peer 连接包装成 DataChannel 同接口复用同步逻辑 |

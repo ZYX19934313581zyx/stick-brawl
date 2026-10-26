@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { PeerServer } = require('peer');
 
-const ROOT = path.resolve(__dirname, '..');   // index.html 所在目录
+const ROOT = path.resolve(__dirname, '..');
 const PORT = 8081;
 
 http.createServer((req, res) => {

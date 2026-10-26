@@ -1506,6 +1506,11 @@ function toMenu() {
 const NET = { pc:null, dc:null, mode:null, connected:false,
               remoteIn:{ ...ZERO_IN }, snaps:[], sendT:0, pingT:0, rtt:null, pending:'host' };
 // 信令服务器配置：?sig=host 显式指定；或页面跑在信号服务器同机 8081 端口时自动推导
+const ICE_CFG = { iceServers: [
+  { urls: 'stun:stun.miwifi.com:3478' },
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'turn:8.137.118.60:3478', username: 'sbrawl', credential: 'sbrawl2026' }
+] };
 const SIG = (() => {
   const q = new URLSearchParams(location.search);
   if (q.get('sig')) return { host: q.get('sig'), port: +(q.get('p') || 9000), path: '/' };
@@ -1536,7 +1541,7 @@ function peerHostRoom() {
   closeNet();
   NET.pending = 'host';
   const code = genCode();
-  const peer = new Peer('sbrawl-' + code, { host: SIG.host, port: SIG.port, path: SIG.path, secure: location.protocol === 'https:' });
+  const peer = new Peer('sbrawl-' + code, { host: SIG.host, port: SIG.port, path: SIG.path, secure: location.protocol === 'https:', config: ICE_CFG });
   NET.peerObj = peer;
   const st = document.getElementById('np-st0');
   peer.on('open', () => {
@@ -1558,7 +1563,7 @@ function peerJoinRoom() {
   if (code.length !== 5) { if (st) { st.textContent = '房间码是 5 位'; st.style.color = '#ff7b6b'; } return; }
   closeNet();
   NET.pending = 'guest';
-  const peer = new Peer({ host: SIG.host, port: SIG.port, path: SIG.path, secure: location.protocol === 'https:' });
+  const peer = new Peer({ host: SIG.host, port: SIG.port, path: SIG.path, secure: location.protocol === 'https:', config: ICE_CFG });
   NET.peerObj = peer;
   peer.on('open', () => {
     const c = peer.connect('sbrawl-' + code, { reliable: true });
