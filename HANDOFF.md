@@ -24,7 +24,8 @@
 | 打击感 | 命中白/金色火花环+放射线(sparks),斩痕新月(slashMarks,超必杀/升龙/重击),命中停顿 轻击0.075s/重击0.14s,屏震 9/22,音效三层(噪声snap+正弦低频冲击+重击方波轰鸣,随机音高±25%),挥击 whoosh 音效,升龙上升金色斗气粒子 |
 | 模式 | 单人对电脑(AI 状态机,带反应延迟)/ 本地双人 / 联机建房 / 联机加入 |
 | **线上部署** | **联机版: http://8.137.118.60:8081/**(阿里云Ubuntu22.04, Node18绿色版/opt/node18, systemd服务stick-brawl开机自启, 部署文件在服务器/root/stick-brawl/, 8081静态+9000 PeerJS信令, 安全组已放行两端口); 一键房间码实测全链路通(建房UK7CS→加入→W同步/快照/rtt)。**单机版: GitHub Pages** https://zyx19934313581zyx.github.io/stick-brawl/ (Pages仅支持手动连接码, 因https混合内容限制)。服务器更新: scp index.html root@8.137.118.60:/root/stick-brawl/ && ssh systemctl restart stick-brawl |
-| 联机方式v4 | **双模式**:①一键房间码(自建PeerJS信令服务器,deploy/目录含 server.js+systemd,8081静态页+9000信令同机部署,页面在8081端口或 ?sig=host 时自动启用) ②手动连接码(无服务器兜底,任何网络必通)。页面层自适应 SIG 常量;peer 连接包装成 DataChannel 同接口复用同步逻辑 |
+| 联机方式v5 | **仅一键房间码**(手动连接码UI与代码已删除);Pages版(无信令)面板显示提示并指向联机版链接 |
+| ~~联机方式v4~~ | ~~双模式~~:①一键房间码(自建PeerJS信令服务器,deploy/目录含 server.js+systemd,8081静态页+9000信令同机部署,页面在8081端口或 ?sig=host 时自动启用) ②手动连接码(无服务器兜底,任何网络必通)。页面层自适应 SIG 常量;peer 连接包装成 DataChannel 同接口复用同步逻辑 |
 | 联机方式v3 | **原生 WebRTC 手动连接码(无任何服务器)**:房主生成连接码(offer base64~1KB)→对方粘贴后生成回复码(answer)→房主粘贴完成即可直连;STUN=google+miwifi;DataChannel有序可靠;移除 PeerJS(公共信令国内不可靠);双标签实测:offer/answer互贴→双端connected→输入映射/快照/rtt全通 |
 | 联机键位 | 远程联机双方都用 P1 键位(WASD+JKL):访客端 guestNetTick 读 P1MAP 传输映射为 p2 输入;主机 HUD 名字=你/对手,访客端 HUD 名字=对手/你。已双标签实测:建房/加入/W跳同步/快照一致 |
 | 按键 | 拳皇WING式:P1:`WASD` + `J轻拳/K轻腿/U重拳/I重腿/L闪避`;P2:`方向键` + `小键盘1轻拳/2轻腿/4重拳/5重腿/3闪避`;**搓招**:↓↘→+拳=气功波,→↓↘+拳=升龙拳,↓↘→↓↘→+拳=超必杀(气满);Esc 菜单,R 重赛 |
