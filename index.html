@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>火柴大乱斗 · Stick Brawl</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" onerror="window.__noPeer=1"></script>
 <style>
   html,body{margin:0;padding:0;height:100%;overflow:hidden;
     font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;user-select:none;
@@ -88,6 +89,10 @@
     font-family:Consolas,monospace;word-break:break-all;outline:none}
   .np-ta:focus{border-color:#45c8ff}
   .np-hr{border:none;border-top:1px solid #26324a;margin:16px 0}
+  .np-code{width:120px;font-size:18px;padding:8px 10px;text-align:center;letter-spacing:6px;
+    border-radius:8px;border:1px solid #33405a;background:#0c121d;color:#ffd257;
+    text-transform:uppercase;outline:none;font-family:inherit}
+  .np-code:focus{border-color:#ffd257}
   .np-close{width:100%;margin-top:16px;font-size:17px;padding:11px 0;cursor:pointer;border-radius:8px;
     border:1px solid #3a4656;background:linear-gradient(180deg,#1b2432,#131a26);color:#c8d2e2;
     letter-spacing:8px;font-family:inherit}
@@ -158,6 +163,17 @@
 <div id="netpanel">
   <div class="ml-card">
     <h2>远程联机 <span class="ml-en">P2P · 免注册</span></h2>
+    <div id="np-onclick" style="display:none">
+      <h3 class="np-h" style="margin-top:4px">一键房间码联机</h3>
+      <div class="np-row">
+        <button id="np-room-host" class="np-btn">创建房间</button>
+        <input id="np-code" class="np-code" maxlength="5" placeholder="房间码">
+        <button id="np-room-join" class="np-btn">加入</button>
+      </div>
+      <div class="np-row"><span class="np-st" id="np-st0"></span></div>
+      <hr class="np-hr">
+      <h3 class="np-h">或手动连接（任何网络必通）</h3>
+    </div>
     <p class="np-tip">双方各打开一次本页面，按下面的步骤复制粘贴两串代码即可直连对战（无需服务器/房间号）</p>
     <h3 class="np-h">房主（你建房）</h3>
     <div class="np-row"><button id="np-host" class="np-btn">① 生成连接码</button><span class="np-st" id="np-st1"></span></div>
@@ -1501,6 +1517,68 @@ const ICE = { iceServers: [
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun.miwifi.com:3478' }
 ] };
+// 信令服务器配置：?sig=host 显式指定；或页面跑在信号服务器同机 8081 端口时自动推导
+const SIG = (() => {
+  const q = new URLSearchParams(location.search);
+  if (q.get('sig')) return { host: q.get('sig'), port: +(q.get('p') || 9000), path: '/' };
+  if (location.port === '8081') return { host: location.hostname, port: 9000, path: '/' };
+  return null;
+})();
+function peerAvailable() { return typeof Peer !== 'undefined' && !window.__noPeer; }
+// 把 PeerJS 连接包装成与 DataChannel 相同的接口，复用全部同步逻辑
+function bindPeerConn(conn) {
+  NET.peer = conn.peerConnection || null;
+  const shim = {
+    send: str => { try { conn.send(JSON.parse(str)); } catch (e) {} },
+    get readyState() { return conn.open ? 'open' : 'connecting'; },
+    close: () => { try { conn.close(); } catch (e) {} }
+  };
+  NET.dc = shim;
+  conn.on('open', () => {
+    NET.connected = true;
+    NET.mode = NET.pending === 'host' ? 'host' : 'guest';
+    startMatch(NET.mode === 'guest' ? 'guest' : 'host');
+  });
+  conn.on('data', d => onNetData(d));
+  conn.on('close', () => { if (state !== 'menu') { toast('对方断开了连接'); toMenu(); } });
+}
+// 一键房间码：建房
+function peerHostRoom() {
+  if (!peerAvailable() || !SIG) { toast('一键联机不可用'); return; }
+  closeNet();
+  NET.pending = 'host';
+  const code = genCode();
+  const peer = new Peer('sbrawl-' + code, { host: SIG.host, port: SIG.port, path: SIG.path, secure: location.protocol === 'https:' });
+  NET.peerObj = peer;
+  const st = document.getElementById('np-st0');
+  peer.on('open', () => {
+    const cd = document.getElementById('codeDisplay');
+    cd.textContent = '房间码 ' + code; cd.style.display = 'block';
+    if (st) st.textContent = '房间码已生成：' + code + '（发给对方，等他输入加入）';
+  });
+  peer.on('connection', c => { if (!NET.connected) bindPeerConn(c); });
+  peer.on('error', e => {
+    if (e.type === 'unavailable-id') { try { peer.destroy(); } catch (err) {} peerHostRoom(); }
+    else if (st) { st.textContent = '联机错误：' + e.type; st.style.color = '#ff7b6b'; }
+  });
+}
+// 一键房间码：加入
+function peerJoinRoom() {
+  if (!peerAvailable() || !SIG) { toast('一键联机不可用'); return; }
+  const code = (document.getElementById('np-code').value || '').trim().toUpperCase();
+  const st = document.getElementById('np-st0');
+  if (code.length !== 5) { if (st) { st.textContent = '房间码是 5 位'; st.style.color = '#ff7b6b'; } return; }
+  closeNet();
+  NET.pending = 'guest';
+  const peer = new Peer({ host: SIG.host, port: SIG.port, path: SIG.path, secure: location.protocol === 'https:' });
+  NET.peerObj = peer;
+  peer.on('open', () => {
+    const c = peer.connect('sbrawl-' + code, { reliable: true });
+    bindPeerConn(c);
+    setTimeout(() => { if (!NET.connected && st) st.textContent = '连接超时：确认房间码和对方在线'; }, 9000);
+  });
+  peer.on('error', e => { if (st) { st.textContent = '联机错误：' + (e.type === 'peer-unavailable' ? '房间不存在或已关闭' : e.type); st.style.color = '#ff7b6b'; } });
+}
 
 function setNetInfo(txt, err) {
   const el = document.getElementById('netinfo');
@@ -1524,6 +1602,8 @@ function iceDone(pc) {
 function closeNet() {
   try { if (NET.dc) NET.dc.close(); } catch (e) {}
   try { if (NET.pc) NET.pc.close(); } catch (e) {}
+  try { if (NET.peerObj) NET.peerObj.destroy(); } catch (e) {}
+  NET.peerObj = null;
   NET.pc = null; NET.dc = null; NET.mode = null; NET.connected = false;
   NET.remoteIn = { ...ZERO_IN }; NET.snaps = []; NET.rtt = null;
 }
@@ -2320,7 +2400,15 @@ document.getElementById('b-ai').onclick   = () => { audio(); toMenu(); startMatc
 document.getElementById('b-2p').onclick   = () => { audio(); toMenu(); startMatch('2p'); };
 /* ---------- 远程联机面板 ---------- */
 const npEl = document.getElementById('netpanel');
-document.getElementById('b-net').onclick = () => { audio(); npEl.classList.add('open'); };
+document.getElementById('b-net').onclick = () => {
+  audio();
+  const oc = document.getElementById('np-onclick');
+  if (SIG && peerAvailable()) oc.style.display = 'block';
+  npEl.classList.add('open');
+};
+document.getElementById('np-room-host').onclick = () => { audio(); peerHostRoom(); };
+document.getElementById('np-room-join').onclick = () => { audio(); peerJoinRoom(); };
+document.getElementById('np-code').addEventListener('keydown', e => { if (e.key === 'Enter') peerJoinRoom(); e.stopPropagation(); });
 document.getElementById('np-close').onclick = () => npEl.classList.remove('open');
 const npSt = (i, t, err) => { const el = document.getElementById('np-st' + i); if (el) { el.textContent = t; el.style.color = err ? '#ff7b6b' : '#45c8ff'; } };
 document.getElementById('np-host').onclick = async () => {
