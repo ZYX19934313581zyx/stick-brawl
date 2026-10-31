@@ -3860,6 +3860,29 @@ class AI {
       }
       const dx = opp.x - m.x, dist = Math.abs(dx), dir = dx >= 0 ? 1 : -1;
       const toward = dir > 0 ? 'r' : 'l', away = dir > 0 ? 'l' : 'r';
+      /* V7-b 大门反应项(威胁感知,置于决策链顶,触发即整拍接管;概率消费走本函数顶部 simRand 换流罩;无威胁时零随机消费=同种子流逐位不变,A/B 可对照) */
+      if (m.char === 'daimon' && m.grounded) {
+        const _cin = opp.state === 'ult' || opp.state === 'clus' || opp.state === 'daichi';   // 对手分镜大招(八稚女/無式/叢雲/大地球);收招段 _cinExit 已转 hitstun 不在威胁集=可惩罚
+        const _pr = match && match.projectiles ? match.projectiles.find(pr => pr.owner === opp && !pr.dead) : null;   // 对手弹道在场(发波写全局 match.projectiles,读同一全局)
+        const _prD = _pr ? Math.abs(_pr.x - m.x) : 9999;
+        const _wav = !!_pr || opp.state === 'fb' || opp.state === 'orochi';                   // ②对手弹道/出手硬直(暗払 fb·大蛇薙蓄力 orochi)
+        if (_cin && opp.st >= 0.4) {                                                          // ①对手 cinema 后段→按拍跳/撤(前摇 0.4s 内由下方每帧快道接管,当帧反应才躲得开 dash 低空窗)
+          this._reCt = (this._reCt || 0) + 1;                                                 // 行为实证计数(验收4):机会/跳/撤
+          if (Math.random() < 0.85) {                                                         // 调2:反应率 0.55+0.35b→0.85 恒定(数据:跳完落地站桩吃后续段=白跳)
+            if (Math.random() < 0.8) { o.u = 1; this._reCj = (this._reCj || 0) + 1; }         // 调2:跳占比 0.7→0.8(撤步对抓取型几乎必死,跳是唯一活解)
+            else { o[away] = 1; this._reCr = (this._reCr || 0) + 1; }
+          }
+          this.o = o; return o;
+        }
+        if (_wav && (_pr ? _prD : dist) < 460) {                                              // 弹道 460px 内才接管;远弹不锁步(调1:此前远弹在场=全程蹲防干站,chip+削槽 12/发 vs 回气 10/s=必破防,被确反死循环)
+          this._reWt = (this._reWt || 0) + 1;
+          const _r = Math.random();
+          if (_r < 0.5) { o.u = 1; o[toward] = 1; this._reWj = (this._reWj || 0) + 1; }       // 调4:跳过波并前跳落位 0.62→0.5(插桩:crush=0 推翻「蹲防=破防陷阱」假说;跳多了喂对空,回调向挡)
+          else if (_r < 0.88) { o.d = 1; this._reWb = (this._reWb || 0) + 1; }                // 调4:蹲防 0.52+0.2b→0.88 平权(波可蹲防:chip 4%/削槽12;难度差在 tick 快慢已足够)
+          else { o[away] = 1; this._reWr = (this._reWr || 0) + 1; }                            // 撤步站防(按后=站防,顺带拉开)
+          this.o = o; return o;
+        }
+      }
       if (!m.grounded) {                                                   // 空中：跳入攻击
         if ((m.state === 'ah1' || m.state === 'ah2') && m.hasHit && Math.random() < 0.75) o.hp = 1;
         if (this.jumpPlan && m.vy > -140) { o.hk = 1; this.jumpPlan = 0; }
@@ -3874,7 +3897,7 @@ class AI {
         if (m.def.moves.orochi && dist > 420 && Math.random() < 0.5) this.orochiHold = 1.02;   // T3 草薙蓄力择:远距 50% 概率蓄三段(按住拳 1.0s 再放);近身不蓄
       } else if (m.char === 'daimon' && dist > 130) {                      // T4 大门专属:无飞行道具——远中距离一律冲刺接近(贴身投技压制,不蓄波)
         o[toward] = 1;                                                     // 持续按前=跑(KOF Advanced)
-        if (dist < 330 && Math.random() < 0.29 * P.aggr) { m.fakeMotion('hcf'); o.hp = 1; }   // 中距离突进出雲投(位移 220 可够到)  V7平衡:0.22→0.29(+30%,大门对位 0-15% 偏低,加大突进抓收冲)
+        if (dist < 430 && Math.random() < 0.29 * P.aggr) { m.fakeMotion('hcf'); o.hp = 1; }   // 中距离突进出雲投(位移 220+抓距96;V7-b:距离门 330→430——挡波/撤步后站位 400±,门不外扩则贴着波墙干跑,扩门后可从被击退位直接突进抓收招)  V7平衡:0.22→0.29(+30%,大门对位 0-15% 偏低,加大突进抓收冲)
         else if (dist < 430 && Math.random() < 0.065) { o.u = 1; this.jumpPlan = 1; }          // 偶尔跳入压起身  V7平衡:0.05→0.065(+30%,跳=过波手段,同分支一并)
       } else if (m.def.moves.md1 && dist > 240 && dist < 420 && Math.random() < 0.22 * P.aggr) {
         o[toward] = 1; o.lp = 1;                                           // T2:八神中距离偶尔夢弹起手(指令技=方向+轻拳直触发,无搓招历史依赖)
@@ -3967,6 +3990,19 @@ class AI {
                (m.state === 'idle' || m.state === 'walk' || m.state === 'crouch') &&
                Math.random() < 0.3 * P.aggr) {                            // 大门:读对手收招硬直(确反窗 atkRec)→出雲突进抓收冲
       m.fakeMotion('hcf'); this.o = { ...ZERO_IN, hp: 1 };
+    }
+    /* V7-b 反应项②b(每帧快道):对手分镜前摇段(定格结束 st<0.4,dash 未到)——不等决策 tick 当帧跳/撤;tick 0.11-0.35s 慢半拍=低空窗必吃(插桩:無式 5 局 62 判) */
+    if (m.char === 'daimon' && !(opp.state === 'ult' || opp.state === 'clus' || opp.state === 'daichi')) this._reCinL = 0;   // 调4:威胁解除清门闩
+    if (m.char === 'daimon' && m.grounded && opp.st < 0.4 && !this._reCinL &&
+        (m.state === 'idle' || m.state === 'walk' || m.state === 'crouch') &&
+        (opp.state === 'ult' || opp.state === 'clus' || opp.state === 'daichi')) {
+      this._reCt = (this._reCt || 0) + 1;
+      if (Math.random() < 0.9) {
+        const _of = { ...this.o, u: 0, d: 0, lp: 0, lk: 0, hp: 0, hk: 0, dg: 0 };   // 清攻击键(分镜期对手免疫,打了白打)
+        if (Math.random() < 0.8) { _of.u = 1; this._reCj = (this._reCj || 0) + 1; this._reCinL = 1; }   // 调4:一次发动只快道跳一次(反复落地再跳=喂对空)
+        else { _of[opp.x >= m.x ? 'l' : 'r'] = 1; this._reCr = (this._reCr || 0) + 1; }
+        this.o = _of;
+      }
     }
     return this.o;
     } finally { Math.random = _mr; }
