@@ -502,7 +502,12 @@ const sfx = {
   jump()   { beep('sine', 240, 400, 0.08, 0.06); },
   max()    { beep('sine', 660, 660, 0.09, 0.14); setTimeout(() => beep('sine', 880, 880, 0.09, 0.14), 80); setTimeout(() => beep('sine', 1180, 1180, 0.16, 0.16), 160); },
   win()    { beep('sine', 440, 660, 0.12, 0.12); setTimeout(() => beep('sine', 550, 880, 0.2, 0.12), 120); },
-  tick()   { beep('sine', 880, 880, 0.04, 0.05); }
+  tick()   { beep('sine', 880, 880, 0.04, 0.05); },
+  otick(tier) {   // V18④:大蛇薙蓄力档位跨越 tick(上升双音;二档/三档音高不同,三档更高更亮)
+    const f = tier >= 3 ? 880 : 620;
+    beep('sine', f, f, 0.05, 0.1);
+    setTimeout(() => beep('sine', Math.round(f * 1.5), Math.round(f * 1.9), 0.09, 0.11), 55);
+  }
 };
 
 /* ---------------- 键盘 ---------------- */
@@ -1119,7 +1124,7 @@ const POSE_DAIMON = Object.assign(mkPoses(), {
          aF:[.55,1.45], bF:[1.3,.35], aB:[.2,-1.05], bB:[.95,.9], tF:[-.35,-.05], kF:[-.55,-.25], tB:[.4,.3], kB:[.5,.8] },
   ahp: { s1:.24, wW:.26, rS:.6, rW:.4, rMul:.5,                                     // 肘坠(招牌):双肘折举体侧→垂直劈落体前(aF 末 1.15/bF .35 肘尖朝下),lean .62 深前压
          A:{ aF:[.55,-.9], bF:[1.3,1.5], lean:[.15,-.22], aB:[.3,-.75], bB:[1.45,1.5], tF:[.35,.55], kF:[.25,.1], tB:[.5,.5], kB:[.6,.6] },
-         B:{ aF:[-.9,1.15], bF:.35, lean:[-.22,.62], aB:[-.75,1.3], bB:.5, tF:[.55,.6], kF:[.1,.3], tB:[.5,-.3], kB:[.6,1.1] } },
+         B:{ aF:[-.9,1.15], bF:[1.5,.35], lean:[-.22,.62], aB:[-.75,1.3], bB:[1.5,.5], tF:[.55,.6], kF:[.1,.3], tB:[.5,-.3], kB:[.6,1.1] } },   // V16 修复:bF/bB 原为标量 .35/.5,而 ahp 分支 B 段读数组 lerp(B.bF[0],B.bF[1],e)→双手坐标 NaN 19/25 帧+插值层粘滞(大门空中重拳后双手永久消失,审计新发现);对齐 iori/kyo [A段末值,终值] 约定,终值=U6 设计值不变
   alk: { s1:.26, wW:.24, r0:.56, rMul:.45, kFD:.07,                                 // 空中轻腿:收膝短踹
          A:{ tF:[.35,.9], kF:[.45,.15], tB:.3, kB:.5 },
          B:{ tF:[.9,1.1], kF0:.15, lean:[-.18,-.36], aF:[1.25,1.1], bF:1.05, aB:[-.85,-1.3], bB:.9, tB:.3, kB:.5 } },
@@ -1322,8 +1327,7 @@ class Fighter {
     this._wobT = 0; this._wobDur = 0.3; this._wobA0 = 0; this._wobW = 24; this._wobK = 7; this._wobBig = false;   // P25②:摇晃回正弹簧参数
     this._facing0 = facing; this._idleT = 0; this._idleNext = 7; this._idleAct = 0; this._idleActT = 0; this._idleActType = 0; this._idleCyc = 0; this._idleWas = false;   // P27:待机小动作状态
     this._md1TapT = -9; this._mdCharged = false; this._jumpDir = 0; this._clusBoom = false;   // T2:夢弹蓄力/百合折出跳方向快照/叢雲焰爆旗
-    this._orochiT0 = 0; this._orochiTier = 0;   // T3:大蛇薙蓄力/档位(U2:無式改计数删)
-    this._jishinCd = 0; this._shoutT = -9;   // T4:地雷震命中反连冷却(踉跄 1.2s 期间不可再拍地,防无限踉跄循环;独立于 fbCd 不挡 sgc 追击);V5:喊声节流戳
+    this._orochiT0 = 0; this._orochiTier = 0; this._orochiTierLive = 0;   // T3:大蛇薙蓄力/档位(U2:無式改计数删);V18:+实时档位(蓄力中逐帧算,pip/光效/快照消费)   // T4:地雷震命中反连冷却(踉跄 1.2s 期间不可再拍地,防无限踉跄循环;独立于 fbCd 不挡 sgc 追击);V5:喊声节流戳
     this._cin = null; this._cinSeq = false; this._cinFired = null; this._cinPose = null;   // U1:分镜执行器态(表名/已进演出段/段事件已发/当前段姿势键)
     this._pinned = false;   // U3:victim 倒栽钉地态(grabbed 姿势第四变体,见 computeTargetPose grabbed 分支)
     this._cinI = 0; this._cinT = 0; this._cinMax2 = false;   // U2:flow 分镜执行器游标(段序/段内时间)/MAX2 融合旗
@@ -1343,7 +1347,7 @@ class Fighter {
     this._wobT = 0; this._wobBig = false; this._hitWob = false;   // P25
     this._idleT = 0; this._idleAct = 0; this._idleActT = 0; this._idleWas = false;   // P27:回合重置清小动作(下次 idle 重新排期)
     this._md1TapT = -9; this._mdCharged = false; this._jumpDir = 0; this._clusBoom = false;   // T2:夢弹蓄力/百合折/叢雲 旗标回合重置
-    this._orochiT0 = 0; this._orochiTier = 0;   // T3:大蛇薙蓄力/档位回合重置(U2:無式改计数删)
+    this._orochiT0 = 0; this._orochiTier = 0; this._orochiTierLive = 0;   // T3:大蛇薙蓄力/档位回合重置(U2:無式改计数删);V18:+实时档位清零
     this._jishinCd = 0; this._shoutT = -9;   // T4:地雷震反连冷却回合重置;V5:喊声节流戳回合重置
     this._cin = null; this._cinSeq = false; this._cinFired = null; this._cinPose = null;   // U1:分镜执行器态回合重置
     this._cinI = 0; this._cinT = 0; this._cinMax2 = false;   // U2:flow 分镜执行器游标/MAX2 融合旗回合重置
@@ -1449,7 +1453,7 @@ class Fighter {
     this._fdMv = name; this._fdAdv = null; this._fdOn = null;   // P28:帧数据显示——记最近出招,清上一招的有利帧
     if (name === 'md1') this._md1TapT = this.age;               // T2:夢弹蓄力基准=一段按拳时刻(命中后按住拳累计0.3s→二段+2)
     else if (name !== 'md2') this._mdCharged = false;           // T2:蓄力旗只在 md1→md2 推进时保留(md2 出招瞬间由推进逻辑已置好)
-    if (name === 'orochi') { this._orochiT0 = this.age; this._orochiTier = 0; }   // T3:大蛇薙蓄力基准=出招时刻;清档位(松手时按 heldT 重定)
+    if (name === 'orochi') { this._orochiT0 = this.age; this._orochiTier = 0; this._orochiTierLive = 0; }   // T3:大蛇薙蓄力基准=出招时刻;清档位(松手时按 heldT 重定;V18:+实时档位清零,进蓄力首帧重算 nt=1)
     if (this.def.cinemas && this.def.cinemas[name]) {           // U1:分镜表驱动招(八稚女等)——执行器态初始化(规范③:角色只写数据不写状态机)
       const cin = this.def.cinemas[name];
       this._cin = name; this._cinSeq = false; this._cinFired = {}; this._cinPose = null;
@@ -1621,6 +1625,7 @@ class Fighter {
     this._wobT = Math.max(0, (this._wobT || 0) - dt);   // P25②:摇晃回正倒计时
     this._recT = Math.max(0, (this._recT || 0) - dt);    // P26①:收招过冲倒计时
     this._stopT = Math.max(0, (this._stopT || 0) - dt);  // P26②:急停前倾倒计时
+    if (this.state !== 'orochi' && this._orochiTierLive) this._orochiTierLive = 0;   // V18⑤:蓄力被打断(受击等)离开 orochi 即清实时档——pip/光效是 orochi 绘制态同帧消失,字段清零防快照残留
     // P27②:待机小动作计时——idle 累计 _idleT,6-10s 随机触发 0.8s 小动作(0 甩手腕/1 活动脖子/2 重心换脚);纯姿势层,离开 idle/攻击 tap 即清(不卡操作)
     if (this.state === 'idle') {
       if (!this._idleWas) { this._idleT = 0; this._idleNext = 6 + this._idRand() * 4; }   // 刚进 idle:重新排下次触发
@@ -1777,12 +1782,34 @@ class Fighter {
         this.vx *= Math.pow(0.001, dt);
         const heldT = this.age - (this._orochiT0 || this.age);
         if (!(inp.lp || inp.hp) || this.st > 2.6) {          // 松手(或超时保险丝 2.6s)→放出
-          this._orochiTier = heldT >= 1.0 ? 3 : heldT >= 0.5 ? 2 : 1;
+          this._orochiTier = heldT >= 1.0 ? 3 : heldT >= 0.5 ? 2 : 1;   // V18:松手结算沿用 heldT 口径(_orochiTier 只在松手帧定档,释放路径零改动)
+          this._orochiTierLive = 0;                          // V18⑤:释放即清实时档(pip/光晕是 orochi 绘制态随 state→fb 消失,字段清零防快照残留)
           this.startAtk('fb');                               // 放出姿势复用 fb;弹体三档在 fb spawn 分支结算
           this.physics(dt); this.prevIn = inp; return;
         }
-        if (Math.random() < 0.8) flame(this.x + this.facing * 26, this.y - 74, 1, this.accent);        // 手心聚火
-        if (heldT >= 0.5 && Math.random() < 0.7) flame(this.x + this.facing * 28, this.y - 78, 1, '#ffe9a8');   // 二档起加白热内焰
+        // V18:实时档位(与松手结算同口径 heldT;被打断=state 离开 orochi,update 头部统一清零)
+        const nt = heldT >= 1.0 ? 3 : heldT >= 0.5 ? 2 : 1;
+        // V18②:火效跟实际掌位(读姿势插值层 palm,档位手位递后自动跟随;首帧 _pose 未建回落旧锚点)
+        const pw = this._pose, pxh = this.x + (pw ? pw.haX : 26) * this.facing, pyh = this.y + (pw ? pw.haY : -74);
+        if (nt > (this._orochiTierLive || 0) && nt >= 2) {   // V18④:0.5s/1.0s 跨越瞬间=手部金色闪光+上升 tick(两档音高)+小粒子爆
+          sparks.push({ x: pxh, y: pyh, t: 0, max: 0.16, big: false, col: '#ffd257' });
+          for (let i = 0; i < 6; i++) { const aa = Math.random() * Math.PI * 2, vv = 120 + Math.random() * 160;
+            particles.push({ x: pxh, y: pyh, vx: Math.cos(aa) * vv, vy: Math.sin(aa) * vv - 90, life: 0, max: 0.28 + Math.random() * 0.22, col: '#ffd257', sz: 2.5 }); }
+          sfx.otick(nt);
+        }
+        this._orochiTierLive = nt;
+        if (nt === 1) {                                      // V18② 一档:小火苗闪烁
+          if (Math.random() < 0.55) flame(pxh, pyh, 1, this.accent);
+        } else if (nt === 2) {                               // 二档:中火+白热内焰+偶发金色火星
+          if (Math.random() < 0.75) flame(pxh, pyh, 1, this.accent);
+          if (Math.random() < 0.5) flame(pxh, pyh, 1, '#ffe9a8');
+          if (Math.random() < 0.12) particles.push({ x: pxh, y: pyh, vx: (Math.random() - 0.5) * 90, vy: -120 - Math.random() * 90, life: 0, max: 0.3 + Math.random() * 0.2, col: '#ffd257', sz: 2.5 });
+        } else {                                             // 三档:大火+白热内焰+上升粒子柱+火星
+          if (Math.random() < 0.9) flame(pxh, pyh, 2, this.accent);
+          if (Math.random() < 0.6) flame(pxh, pyh, 1, '#ffe9a8');
+          particles.push({ x: pxh + (Math.random() - 0.5) * 12, y: pyh + (Math.random() - 0.5) * 14, vx: (Math.random() - 0.5) * 40, vy: -190 - Math.random() * 110, life: 0, max: 0.35 + Math.random() * 0.2, col: Math.random() < 0.5 ? this.accent : '#ffd257', sz: 3 });
+          if (Math.random() < 0.15) particles.push({ x: pxh, y: pyh, vx: (Math.random() - 0.5) * 160, vy: -150 - Math.random() * 100, life: 0, max: 0.25 + Math.random() * 0.2, col: '#fff3b0', sz: 2 });
+        }
         this.physics(dt); this.prevIn = inp; return;
       }
       // 连招缓冲：攻击中按的招先缓存；命中/被挡后按取消链规则接招，未命中则收招末尾接
@@ -3394,12 +3421,15 @@ class Fighter {
         legFO = legIKB(16, 0, BI.hipY - 4); legBO = legIKB(-14, 0, BI.hipY - 4);
       }
     } else if (s === 'orochi') {
-      // T3 大蛇薙蓄力:沉身拧腰双掌收腰蓄势,蓄越久越沉(档位深度按 st 估——快照伪对象无输入字段,访客端近似)
-      const chg = clamp(t / 1.0, 0, 1);
-      hipDrop = 12 + 8 * chg; lean = 0.06 - 0.12 * chg;
-      aF = lerp(0.55, -0.38, chg); bF = lerp(1.3, 1.72, chg);   // 前手收到腰侧聚火
-      aB = lerp(0.3, -0.52, chg); bB = lerp(1.45, 1.82, chg);   // 后手抱拳蓄势
-      legFO = legIKB(18 - 4 * chg, 0, BI.hipY + hipDrop); legBO = legIKB(-16 - 4 * chg, 0, BI.hipY + hipDrop);
+      // T3 大蛇薙蓄力:沉身拧腰双掌收腰蓄势;V18① 姿势分档——三档渐进变体(档位越高重心越沉 7px/档、双手越向后拉满),
+      // 按 st(=heldT,主客同口径;快照伪对象统一由 st 分档,访客端经 snap.st/snap.ot 同步)离散跳档,
+      // 跳档瞬间的姿势落差由 computePose 36/s 插值 2-3 帧平滑落位(配合阈值闪光/tick 读档)
+      const oTier = t >= 1.0 ? 3 : t >= 0.5 ? 2 : 1;
+      const oW = oTier === 3 ? 1 : (oTier === 2 ? 0.5 : 0);   // 档位锚点 0/0.5/1(三档关键值插值出渐进变体)
+      hipDrop = 12 + 14 * oW; lean = 0.06 - 0.16 * oW;
+      aF = lerp(0.5, -0.5, oW); bF = lerp(1.35, 2.05, oW);   // 前手肘后拉、拳收腰侧(档位越高手越靠后)
+      aB = lerp(0.25, -0.5, oW); bB = lerp(1.5, 1.95, oW);   // 后手抱拳同步后拉蓄满
+      legFO = legIKB(18 - 8 * oW, 0, BI.hipY + hipDrop); legBO = legIKB(-16 - 6 * oW, 0, BI.hipY + hipDrop);
     } else if (s === 'jishin') {
       // T4 地雷震:双臂高举过头(0-0.15)→猛拍地(0.15-0.3)→低伏按地收招;腿 IK 大开蹲踞零反关节(近似设计)
       const p = t / ATK.jishin.dur;
@@ -3700,10 +3730,10 @@ class Fighter {
     if (s === 'idle' && (this._stopT || 0) > 0) lean += (this._stopLean || 0.18) * (this._stopT / 0.15);
     // KOF 式收招回落：普通招式最后 28% 时间内，上肢主动回落到接近站架
     // 出招结束瞬间姿态已≈抱架，与 idle/下一招衔接零跳变
-    if (ATK[s] && s !== 'fb' && s !== 'ult' && s !== 'clus' && s !== 'dp' && s !== 'daichi') {   // T2:叢雲抓取序列不同落站架(同 ult);T4:大地球同抓取序列
+    if (ATK[s] && s !== 'fb' && s !== 'ult' && s !== 'clus' && s !== 'dp' && s !== 'daichi' && s !== 'orochi') {   // T2:叢雲抓取序列不同落站架(同 ult);T4:大地球同抓取序列;V16:orochi 蓄力态不入回落——dur .42 但蓄力可达 2.6s,st>dur 段本块把 w 推到 14,姿势沿「蓄力位→站架」方向线性外插成「面条人」(躯干倒转 lean 3.09/髋部上浮 130px/手臂角绕整圈),蓄力姿势由专属分支全程保持
       const p2 = t / ATK[s].dur;
       if (p2 > 0.72) {
-        const w = (p2 - 0.72) / 0.28 * 0.72;
+        const w = Math.min(0.72, (p2 - 0.72) / 0.28 * 0.72);   // V16:clamp 封顶——w 设计只覆盖 p2∈(0.72,1](收招段恰=0.72 回抱架);普通招 atkRec 期 p2 可到 ~1.35,旧式继续外插最多多甩 2-3°/2px 级非设计行为,clamp 后恒收敛不外插(防新增长时状态同类复发)
         const ky = this.char === 'kyo';   // T3:草薙回落目标=双手低位抱拳新站姿(其余角色原值不变)
         lean = lerp(lean, ky ? 0.19 : 0.16, w);
         hipDrop = lerp(hipDrop, 9, w);
@@ -3817,6 +3847,37 @@ class Fighter {
       c.moveTo(p.hx, p.hy); c.lineTo(p.knB, p.kyB); c.lineTo(p.ftB, p.fyB);
       c.stroke();
       c.beginPath(); c.arc(p.hdx, p.hdy, BI.headR + 1, 0, Math.PI * 2); c.stroke();
+      c.restore();
+    }
+    if (this.state === 'orochi') {   // V18③②:档位标记(头顶三菱形 pip)+掌前脉动光晕盘——纯绘制态,state 离开 orochi(释放/被打断)同帧消失零残留
+      const otv = this._orochiTierLive || (this.st >= 1 ? 3 : this.st >= 0.5 ? 2 : 1);   // 主端=实时档;访客端=snap.ot(旧快照缺字段回落 st 推导,同口径)
+      const nowS = performance.now() / 1000, pu = Math.sin(nowS * 10);
+      const ac2 = this.accent || '#ff9a2e';
+      c.save();
+      const gr = [13, 19, 27][otv - 1] * (1 + 0.09 * pu);   // 光晕盘半径按档缩放+脉动
+      const gx = p.haX + 5, gy = p.haY;                     // 局部坐标 +x=面朝方向,+5=掌前
+      const gg = c.createRadialGradient(gx, gy, 1, gx, gy, gr);
+      gg.addColorStop(0, otv >= 3 ? 'rgba(255,240,190,0.6)' : 'rgba(255,225,150,0.45)');
+      gg.addColorStop(0.55, otv >= 2 ? 'rgba(255,170,60,0.28)' : 'rgba(255,154,46,0.18)');
+      gg.addColorStop(1, 'rgba(255,140,40,0)');
+      c.globalAlpha = a * (0.7 + 0.3 * pu);
+      c.fillStyle = gg;
+      c.beginPath(); c.arc(gx, gy, gr, 0, Math.PI * 2); c.fill();
+      for (let i = 0; i < 3; i++) {   // 头顶三菱形:复用胜场 pip 风格(45° 方块),橙色填充,蓄满一档点亮一枚
+        c.save();
+        c.translate(p.hdx - 17 + i * 17, p.hdy - BI.headR - 13);
+        c.rotate(Math.PI / 4);
+        if (i < otv) {
+          c.fillStyle = ac2; c.shadowColor = ac2; c.shadowBlur = 9;
+          c.fillRect(-5.5, -5.5, 11, 11);
+          c.shadowBlur = 0;
+          c.strokeStyle = '#ffd9a0'; c.lineWidth = 1.5; c.strokeRect(-2.5, -2.5, 5, 5);
+        } else {
+          c.strokeStyle = '#46536e'; c.lineWidth = 2;
+          c.strokeRect(-4.5, -4.5, 9, 9);
+        }
+        c.restore();
+      }
       c.restore();
     }
     c.restore();
@@ -4068,7 +4129,8 @@ class Match {
     const isAt = mode === 'attract';
     const isTu = mode === 'tutorial';
     const c1 = isAt ? ROSTER[Math.floor(Math.random() * ROSTER.length)] : selChar1;   // 演示:P1 也随机
-    const c2 = (mode === 'ai' || mode === 'train' || isAt || isTu) ? ROSTER[Math.floor(Math.random() * ROSTER.length)] : selChar2;   // 随机流派
+    const c2 = (mode === 'ai' || mode === 'train' || isAt || isTu) ? ROSTER[Math.floor(Math.random() * ROSTER.length)]
+             : (mode === 'host' && NET.remoteChar && CHAR_DEFS[NET.remoteChar]) ? NET.remoteChar : selChar2;   // V17:host 消费互报缓存(访客 chr 早于构造到达的竞态兜底+R 重开重建 match 后不再回退 selChar2)
     this.p1 = new Fighter(430, 1, '#ff5555', (mode === 'host' ? '你' : mode === 'train' ? '练习' : isAt ? 'CPU' : '玩家1') + '·' + CHAR_DEFS[c1].tag, c1);
     this.p2 = new Fighter(850, -1, '#45c8ff', (mode === 'ai' ? '电脑' : mode === 'host' ? '对手' : mode === 'train' ? '木桩' : isAt ? 'CPU' : '玩家2') + '·' + CHAR_DEFS[c2].tag, c2);
     this.ai = (mode === 'ai' || mode === 'train' || isAt || isTu) ? new AI(this.p2, this.p1, isAt ? 2 : isTu ? 0 : (mode === 'ai' ? aiDiff : 1)) : null;
@@ -4425,7 +4487,7 @@ function attractTick(dt) {                   // 菜单无浮层闲置 30s → �
 
 /* ---------------- 联机（原生 WebRTC，手动连接码，无服务器） ---------------- */
 const NET = { pc:null, dc:null, mode:null, connected:false,
-              remoteIn:{ ...ZERO_IN }, snaps:[], sendT:0, pingT:0, rtt:null, pending:'host' };
+              remoteIn:{ ...ZERO_IN }, snaps:[], sendT:0, pingT:0, rtt:null, pending:'host', remoteChar:null };   // V17:remoteChar=对端互报角色缓存(open 竞态下消息早于 match 构造到达时兜底,构造时消费)
 // 信令服务器配置：?sig=host 显式指定；或页面跑在信号服务器同机 8081 端口时自动推导
 const ICE_CFG = { iceServers: [
   { urls: 'stun:stun.miwifi.com:3478' },
@@ -4515,6 +4577,8 @@ function closeNet() {
   NET.peerObj = null;
   NET.pc = null; NET.dc = null; NET.mode = null; NET.connected = false;
   NET.remoteIn = { ...ZERO_IN }; NET.snaps = []; NET.rtt = null;
+  NET.remoteChar = null;   // V17:清互报缓存防上一场角色泄漏进下一场(selChar1 属本地选角,不动)
+  NET.lastIn = 0; NET.lastEcho = null;   // V17:陈旧心跳时间戳跨场残留会让重连后第一帧就触发 4s 断线误判(实测 lastIn 残留 143s→主机接受连接后瞬断)
 }
 function bindDC(dc) {
   NET.dc = dc;
@@ -4530,12 +4594,15 @@ function bindDC(dc) {
 }
 // 房主：生成连接码（offer）
 function onNetData(d) {
-  if (NET.mode === 'host') {
-    if (d && d.in) { NET.remoteIn = { ...ZERO_IN, ...d.in }; NET.lastIn = performance.now(); }
-    if (d && d.chr && CHAR_DEFS[d.chr] && match) {                  // 访客流派同步(计数阶段内生效)
+  if (d && d.chr && CHAR_DEFS[d.chr]) {                            // V17:互报角色全时态接收+入缓存——旧版只在 NET.mode==='host' 分支内处理,访客 chr 早于主机 open 事件到达时 NET.mode 还是 null,消息被静默丢弃且 chr 只发一次永不重发
+    NET.remoteChar = d.chr;
+    if (NET.mode === 'host' && match && match.mode === 'host') {   // match 已构造→实时应用;未构造→只留缓存,Match('host') 构造时消费
       match.p2.char = d.chr; match.p2.accent = CHAR_DEFS[d.chr].accent;
       match.p2.name = '对手·' + CHAR_DEFS[d.chr].tag;
     }
+  }
+  if (NET.mode === 'host') {
+    if (d && d.in) { NET.remoteIn = { ...ZERO_IN, ...d.in }; NET.lastIn = performance.now(); }
     if (d && d.ping != null) NET.dc.send(JSON.stringify({ pong: d.ping }));
     if (d && d.rtt != null) NET.rtt = d.rtt;
   } else if (NET.mode === 'guest') {
@@ -4554,8 +4621,8 @@ function snapFighter(f) {
            hp:Math.round(f.hp*10)/10, mt:Math.round(f.meter), w:f.wins, gd:Math.round(f.guard || GUARD_MAX),
            mx:Math.round((f.maxT || 0) * 10), ch:f.char || 'iori',
            l:f._lifted ? 1 : 0, sm:f._slammed ? 1 : 0, hh:f.hasHit ? 1 : 0,
-           pn:f._pinned ? 1 : 0, cp:f._cinPose || null,
-           gt:f.grabT != null ? Math.round(f.grabT * 1000) / 1000 : null };   // U1:分镜/victim 姿势态同步访客端(举起/摔平/ult 段姿势),演出不靠本地重算;U3:+pn 倒栽钉地/cp 分镜段姿势键(大门专属 g* 帧同步)
+           pn:f._pinned ? 1 : 0, cp:f._cinPose || null, ot:f._orochiTierLive || 0,
+           gt:f.grabT != null ? Math.round(f.grabT * 1000) / 1000 : null };   // U1:分镜/victim 姿势态同步访客端(举起/摔平/ult 段姿势),演出不靠本地重算;U3:+pn 倒栽钉地/cp 分镜段姿势键(大门专属 g* 帧同步);V18:+ot 蓄力实时档(访客端 pip/光晕盘同步)
 }
 function hostNetTick(dt) {
   if (NET.lastIn && performance.now() - NET.lastIn > 4000) {              // P10:对方 4s 无包=断开
@@ -4597,6 +4664,7 @@ function drawGuestFighter(c, snap, color, name, otherX, alpha, ch) {
   Object.setPrototypeOf(f, Fighter.prototype);
   f._lifted = !!snap.l; f._slammed = !!snap.sm; f._pinned = !!snap.pn; f.hasHit = !!snap.hh;   // U1:victim 三态+ult 段姿势快照回填(演出同步;访客不跑分镜逻辑);U3:+pn 倒栽钉地
   f._cinPose = snap.cp || null;   // U3:分镜段姿势键同步(大门 g* 专属帧;旧快照无 cp=回落 legacy hasHit 近似)
+  f._orochiTierLive = snap.ot || 0;   // V18:蓄力实时档同步(访客端头顶 pip/掌前光晕盘;旧快照缺 ot=draw 内回落 st 推导)
   f.draw(c, alpha);
   return f;
 }
